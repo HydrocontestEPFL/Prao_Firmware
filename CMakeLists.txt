@@ -568,3 +568,5 @@ else()
 endif()
 
 include(CPack)
+
+add_executable(test_git test_git.cpp)
