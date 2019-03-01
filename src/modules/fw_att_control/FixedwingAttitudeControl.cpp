@@ -241,7 +241,7 @@ FixedwingAttitudeControl::parameters_update()
 	param_get(_parameter_handles.rattitude_thres, &_parameters.rattitude_thres);
 
 	if (_vehicle_status.is_vtol) {
-		param_get(_parameter_handles.vtol_type, &_parameters.vtol_type);
+		param_get(_parameter_handles.vtol_type, &_parameters.vtol_type); //pas compris
 	}
 
 	param_get(_parameter_handles.bat_scale_en, &_parameters.bat_scale_en);
@@ -249,7 +249,7 @@ FixedwingAttitudeControl::parameters_update()
 	param_get(_parameter_handles.airspeed_mode, &tmp);
 	_parameters.airspeed_disabled = (tmp == 1);
 
-	/* pitch control parameters */
+	/* pitch control parameters */           // Set les para definis avant
 	_pitch_ctrl.set_time_constant(_parameters.p_tc);
 	_pitch_ctrl.set_k_p(_parameters.p_p);
 	_pitch_ctrl.set_k_i(_parameters.p_i);
@@ -280,7 +280,7 @@ FixedwingAttitudeControl::parameters_update()
 }
 
 void
-FixedwingAttitudeControl::vehicle_control_mode_poll()
+FixedwingAttitudeControl::vehicle_control_mode_poll() //inutile pour nous
 {
 	bool updated = false;
 
@@ -312,7 +312,7 @@ FixedwingAttitudeControl::vehicle_manual_poll()
 			    !_vcontrol_mode.flag_control_offboard_enabled) {
 
 				if (_vcontrol_mode.flag_control_attitude_enabled) {
-					// STABILIZED mode generate the attitude setpoint from manual user inputs
+					// STABILIZED mode generate the attitude setpoint ( references à atteindre ) from manual user inputs
 					_att_sp.timestamp = hrt_absolute_time();
 					_att_sp.roll_body = _manual.y * _parameters.man_roll_max + _parameters.rollsp_offset_rad;
 					_att_sp.roll_body = math::constrain(_att_sp.roll_body, -_parameters.man_roll_max, _parameters.man_roll_max);
@@ -337,7 +337,7 @@ FixedwingAttitudeControl::vehicle_manual_poll()
 				} else if (_vcontrol_mode.flag_control_rates_enabled &&
 					   !_vcontrol_mode.flag_control_attitude_enabled) {
 
-					// RATE mode we need to generate the rate setpoint from manual user inputs
+					// RATE mode we need to generate the rate setpoint from manual user inputs ( pas trop compris )
 					_rates_sp.timestamp = hrt_absolute_time();
 					_rates_sp.roll = _manual.y * _parameters.acro_max_x_rate_rad;
 					_rates_sp.pitch = -_manual.x * _parameters.acro_max_y_rate_rad;
