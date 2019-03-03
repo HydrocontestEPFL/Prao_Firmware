@@ -1,18 +1,18 @@
 #!/bin/sh
 #
-#@name prao
+# @name prao
 #
-#@type Flying Wing
-#@class Plane
+# @type Flying Wing
+# @class Plane
 #
-#@maintainer Johan Poccard <johan.poccard-saudart@epfl.ch>
+# @maintainer Johan Poccard <johan.poccard-saudart@epfl.ch>
 #
-#@output MAIN1 rudder
-#@output MAIN2 main foil
-#@output MAIN3 small foil
-#@output MAIN4 throttle
+# @output MAIN1 rudder
+# @output MAIN2 main foil
+# @output MAIN3 small foil
+# @output MAIN4 throttle
 #
-#@output AUX A DEFINIR
+# @output AUX A DEFINIR
 #
 
 sh /etc/init.d/rc.fw_defaults // peut-être besoin de créer un nouveau fichier defaults
