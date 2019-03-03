@@ -2,7 +2,8 @@
 #
 #@name prao
 #
-#@type boat
+#@type Flying Wing
+#@class Plane
 #
 #@maintainer Johan Poccard <johan.poccard-saudart@epfl.ch>
 #
@@ -44,8 +45,8 @@ then
         param set PWM_MAX 2000
 fi
 
-//Configure this as plane
-set MAV_TYPE 11
+//Configure this as fixed wing
+set MAV_TYPE 1
 
 //Set mixer
 set MIXER prao
