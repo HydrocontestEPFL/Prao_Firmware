@@ -6,7 +6,7 @@
 #
 #@maintainer Johan Poccard <johan.poccard-saudart@epfl.ch>
 #
-#@output MAIN1 steering
+#@output MAIN1 rudder
 #@output MAIN2 main foil
 #@output MAIN3 small foil
 #@output MAIN4 throttle

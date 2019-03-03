@@ -354,14 +354,16 @@ int rover_steering_control_thread_main(int argc, char *argv[])
 				orb_copy(ORB_ID(vehicle_status), vstatus_sub, &vstatus);
 
 				/* sanity check and publish actuator outputs */
-				if (PX4_ISFINITE(actuators.control[0]) &&
-				    PX4_ISFINITE(actuators.control[1]) &&
-				    PX4_ISFINITE(actuators.control[2]) &&
-				    PX4_ISFINITE(actuators.control[3])) {
-					orb_publish(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, actuator_pub, &actuators);
+				if (PX4_ISFINITE(actuators.control[0])) {
+					if (1 &&
+						PX4_ISFINITE(actuators.control[1]) &&
+						PX4_ISFINITE(actuators.control[2]) &&
+						PX4_ISFINITE(actuators.control[3])) {
+						orb_publish(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, actuator_pub, &actuators);
 
-					if (verbose) {
-						warnx("published");
+						if (verbose) {
+							warnx("published");
+						}
 					}
 				}
 			}
