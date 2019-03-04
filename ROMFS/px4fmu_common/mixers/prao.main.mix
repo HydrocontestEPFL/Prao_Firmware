@@ -48,7 +48,3 @@ The mixer is configure as a pass through.
 M: 1
 O:      10000  10000      0 -10000  10000
 S: 0 0  10000  10000      0 -10000  10000
-
-
-
-
