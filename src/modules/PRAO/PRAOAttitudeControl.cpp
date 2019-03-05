@@ -303,5 +303,3 @@ vehicle_land_detected_poll();
 // Mettre les PID
 
 //Envoyer les commandes au moteur
-
-}
