@@ -3,7 +3,7 @@ PRAO mixer
 
 Designed for EPFL PRAO
 
-This file defines mixers suitable for controlling a bifoiler boat suing PX4.
+This file defines mixers suitable for controlling a prao boat suing PX4.
 Inputs to the mixer come from channel group 0 (vehicule attitude), channel 0 (roll),
 1 (pitch), 2 (yaw) and 3 (thrust).
 
