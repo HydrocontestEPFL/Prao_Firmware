@@ -14,9 +14,6 @@
 #
 # @output AUX A DEFINIR
 #
-# peut etre on doit changer le rc.fw_defaults
-# les parametres sont juste recopiés du bifoiler
-#
 
 sh /etc/init.d/rc.fw_defaults
 
