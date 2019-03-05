@@ -159,8 +159,8 @@ void control_attitude(const struct vehicle_attitude_setpoint_s *att_sp, const st
 	 *
 	 * Control Group 0 (attitude):
 	 *
-	 *    0  -  roll   (-1..+1)
 	 *    1  -  pitch  (-1..+1)
+	 *    0  -  roll   (-1..+1)
 	 *    2  -  yaw    (-1..+1)
 	 *    3  -  thrust ( 0..+1)
 	 *    4  -  flaps  (-1..+1)
