@@ -15,11 +15,11 @@
 # @output AUX A DEFINIR
 #
 
-sh /etc/init.d/rc.fw_defaults // peut-être besoin de créer un nouveau fichier defaults
+sh /etc/init.d/rc.fw_defaults // peut-etre besoin de creer un nouveau fichier defaults
 
 if [$AUTOCNF = yes]
 then
-        param set FW_AIRSPD_MAX 10  //recopié du bifoiler
+        param set FW_AIRSPD_MAX 10  //recopie du bifoiler
         param set FW_AIRSPD_MIN 3
         param set FW_AIRSPD_TRIM 5
         param set FW_ATT_TC 0.3
