@@ -7,7 +7,19 @@
 
 
 class PRAOAttitudeControl {
+    public:
 
+private:
+    //Initialise la structure de parametres
+    struct {
+        float yaw_p;
+        float pitch_p;
+    } _params{};
+
+    //Initialise la structure des handles de param
+    struct {
+        param_t yaw_p;
+    } _param_handles{};
 };
 
 

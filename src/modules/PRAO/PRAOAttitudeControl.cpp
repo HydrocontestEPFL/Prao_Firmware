@@ -71,16 +71,7 @@ PX4_INFO("Hello water!");
 
 //Mettre tous les paramètres à utiliser
 
-//Initialise la structure de parametres
-struct params {
-    float yaw_p;
-    float pitch_p;
-}
 
-//Initialise la structure des handles de param
-struct param_handles {
-    param_t yaw_p;
-}
 
 //Definit certaines variables
 static bool thread_should_exit = false;		/**< Daemon exit flag */
@@ -92,14 +83,14 @@ static struct param_handles ph;
 //Initialise param values
 int parameters_init(struct param_handles *h);
 {
-    h->yaw_p = param_find("PRAO_YAW_R")
+    _param_handles.yaw_p = param_find("PRAO_YAW_R")
     return OK;
 }
 
 // Updater les parametres
 int parameters_update(const struct param_handles *h, struct params *p)
 {
-    param_get(h->yaw_p, &(p->yaw_p));
+    param_get(_param_handles.yaw_p, &(_params.yaw_p));
     return OK;
 }
 
@@ -125,55 +116,55 @@ void control_attitude(const struct manual_control_setpoint *manual_sp, const str
 int prao_control_thread_main(int argc, char *argv[])
 {
 
-// Initialiser les structures donnes par les subscriptions
-struct vehicle_attitude_s att;
-memset(&att, 0, sizeof(att));
-struct vehicle_attitude_setpoint_s att_sp;
-memset(&att_sp, 0, sizeof(att_sp));
-struct vehicle_global_position_s global_pos;
-memset(&global_pos, 0, sizeof(global_pos));
-struct manual_control_setpoint_s manual_sp;
-memset(&manual_sp, 0, sizeof(manual_sp));
-struct vehicle_status_s vstatus;
-memset(&vstatus, 0, sizeof(vstatus));
-struct position_setpoint_s global_sp;
-memset(&global_sp, 0, sizeof(global_sp));
+    // Initialiser les structures donnes par les subscriptions
+    struct vehicle_attitude_s att;
+    memset(&att, 0, sizeof(att));
+    struct vehicle_attitude_setpoint_s att_sp;
+    memset(&att_sp, 0, sizeof(att_sp));
+    struct vehicle_global_position_s global_pos;
+    memset(&global_pos, 0, sizeof(global_pos));
+    struct manual_control_setpoint_s manual_sp;
+    memset(&manual_sp, 0, sizeof(manual_sp));
+    struct vehicle_status_s vstatus;
+    memset(&vstatus, 0, sizeof(vstatus));
+    struct position_setpoint_s global_sp;
+    memset(&global_sp, 0, sizeof(global_sp));
 
-// Initialisation des output structures
-struct actuator_controls_s actuators;
-memset(&actuators, 0, sizeof(actuators));
+    // Initialisation des output structures
+    struct actuator_controls_s actuators;
+    memset(&actuators, 0, sizeof(actuators));
 
 
-//Initialiser la structure d'output à 0
-for (unsigned i = 0; i < (sizeof(actuators.control) / sizeof(actuators.control[0])); i++) {
-actuators.control[i] = 0.0f;
-}
+    //Initialiser la structure d'output à 0
+    for (unsigned i = 0; i < (sizeof(actuators.control) / sizeof(actuators.control[0])); i++) {
+        actuators.control[i] = 0.0f;
+    }
 
-//Faire toutes les subscriptions ( peut etre besoin de mettre un int devant )
-// Maybe limiter l'update rate avec orb_set_interval (voir dans exemples/uuv_exemple)
-int att_sub = orb_subscribe(ORB_ID(vehicle_attitude));
-int att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
-//int ctrl_state_sub = orb_subscribe(ORB_ID(control_state));
-//int accel_sub = orb_subscribe_multi(ORB_ID(sensor_accel), 0);
-//int vcontrol_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
-//int distance_sensor_sub = orb_subscribe(ORB_ID(distance_sensor));
-int param_sub = orb_subscribe(ORB_ID(parameter_update));
-int manual_sp_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
-int global_pos_sub = orb_subscribe(ORB_ID(vehicle_global_position));
-//int local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));
-int vehicle_status_sub = orb_subscribe(ORB_ID(vehicle_status));
-//int vehicle_land_detected_sub = orb_subscribe(ORB_ID(vehicle_land_detected));
+    //Faire toutes les subscriptions ( peut etre besoin de mettre un int devant )
+    // Maybe limiter l'update rate avec orb_set_interval (voir dans exemples/uuv_exemple)
+    int att_sub = orb_subscribe(ORB_ID(vehicle_attitude));
+    int att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
+    //int ctrl_state_sub = orb_subscribe(ORB_ID(control_state));
+    //int accel_sub = orb_subscribe_multi(ORB_ID(sensor_accel), 0);
+    //int vcontrol_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
+    //int distance_sensor_sub = orb_subscribe(ORB_ID(distance_sensor));
+    int param_sub = orb_subscribe(ORB_ID(parameter_update));
+    int manual_sp_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
+    int global_pos_sub = orb_subscribe(ORB_ID(vehicle_global_position));
+    //int local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));
+    int vehicle_status_sub = orb_subscribe(ORB_ID(vehicle_status));
+    //int vehicle_land_detected_sub = orb_subscribe(ORB_ID(vehicle_land_detected));
 
-//Setup of loop
-struct pollfd fds[2];
-fds[0].fd = param_sub;
-fds[0].events = POLLIN;
-fds[1].fd = att_sub;
-fds[1].events = POLLIN;
+    //Setup of loop
+    struct pollfd fds[2];
+    fds[0].fd = param_sub;
+    fds[0].events = POLLIN;
+    fds[1].fd = att_sub;
+    fds[1].events = POLLIN;
 
-while (!thread_should_exit) {
-    //poll waits 500ms to make fds ready, 2 is number of arguments in fds
-    int ret = poll(fds,2,500)
+    while (!thread_should_exit) {
+        //poll waits 500ms to make fds ready, 2 is number of arguments in fds
+        int ret = poll(fds,2,500);
             if (ret<0) {
                 warnx("Error de loop")
             } else if (ret==0) {
@@ -202,12 +193,12 @@ while (!thread_should_exit) {
 
                     //Copier l'attitude sp si il est changé
                     if (att_sp_updated) {
-                    orb_copy(ORB_ID(vehicle_attitude_setpoint), att_sp_sub, &_att_sp);
+                        orb_copy(ORB_ID(vehicle_attitude_setpoint), att_sp_sub, &_att_sp);
                     }
 
                     //Copier le manual sp si il est changé
                     if (manual_sp_updated){
-                    orb_copy(ORB_ID(manual_control_setpoint), manual_sp_sub, &manual_sp);
+                        orb_copy(ORB_ID(manual_control_setpoint), manual_sp_sub, &manual_sp);
                     }
 
                     //Appeler la fonction qui controle les actuators
@@ -256,7 +247,7 @@ int rover_steering_control_main(int argc, char *argv[]) {
                                          SCHED_DEFAULT,
                                          SCHED_PRIORITY_MAX - 20,
                                          2048,
-                                         rover_steering_control_thread_main,
+                                         prao_control_thread_main,
                                          (argv) ? (char *const *) &argv[2] : (char *const *) nullptr);
         thread_running = true;
         return 0;
