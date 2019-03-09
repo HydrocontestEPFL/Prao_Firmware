@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Fixed wing default parameters
+# Fixed wing default parameters (peut etre modifier pour boat)
 #
 # NOTE: Script variables are declared/initialized/unset in the rcS script.
 #
