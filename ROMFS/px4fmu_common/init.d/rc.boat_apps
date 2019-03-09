@@ -1,0 +1,17 @@
+# Hello les bg
+#!/bin/sh
+#
+# Standard apps for boats
+#
+# NOTE: Script variables are declared/initialized/unset in the rcS script.
+#
+
+#
+# Start the attitude and position estimator.
+#
+ekf2 start
+
+#
+# Start attitude controller.
+#
+PRAO start

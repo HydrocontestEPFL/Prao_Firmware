@@ -112,6 +112,34 @@ then
 fi
 
 #
+# Boat setup.
+#
+if [ $VEHICLE_TYPE = boat ]
+then
+	if [ $MIXER = none ]
+	then
+		# Set default mixer for boat if not defined.
+		set MIXER prao
+	fi
+
+	if [ $MAV_TYPE = none ]
+	then
+		# Set a default MAV_TYPE = 11 if not defined.
+		set MAV_TYPE 11
+	fi
+
+	# Set the mav type parameter.
+	param set MAV_TYPE ${MAV_TYPE}
+
+	# Load mixer and configure outputs.
+	sh /etc/init.d/rc.interface
+
+	# Start standard UGV apps.
+	sh /etc/init.d/rc.boat_apps
+fi
+
+
+#
 # VTOL setup.
 #
 if [ $VEHICLE_TYPE = vtol ]
