@@ -65,13 +65,11 @@
 
 #include "PRAOAttitudeControl.h"
 
-extern "C" __EXPORT int fw_att_control_main(int argc, char *argv[]);
+extern "C" __EXPORT int PRAO_att_control_main(int argc, char *argv[]);
 
 PX4_INFO("Hello water!");
 
 //Mettre tous les paramètres à utiliser
-
-
 
 //Definit certaines variables
 static bool thread_should_exit = false;		/**< Daemon exit flag */
@@ -83,7 +81,10 @@ static struct param_handles ph;
 //Initialise param values
 int parameters_init(struct param_handles *h);
 {
-    _param_handles.yaw_p = param_find("PRAO_YAW_R")
+    _param_handles.yaw_p = param_find("PRAO_P_P");
+    _param_handles.yaw_i= param_find("PRAO_P_I");
+    _param_handles.roll_p = param_find("PRAO_R_P");
+    _param_handles.roll_i = param_find("PRAO_R_I");
     return OK;
 }
 
@@ -91,12 +92,16 @@ int parameters_init(struct param_handles *h);
 int parameters_update(const struct param_handles *h, struct params *p)
 {
     param_get(_param_handles.yaw_p, &(_params.yaw_p));
+    param_get(_param_handles.yaw_i, &(_params.yaw_i));
+    param_get(_param_handles.roll_p, &(_params.roll_p));
+    param_get(_param_handles.roll_i, &(_params.roll_i));
     return OK;
 }
 
+// Fonction de controle appelee dans le while
 void control_attitude(const struct manual_control_setpoint *manual_sp, const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators)
 {
-    // On amène le roll à 0 (peut etre un - a rajouter devant yaw_err
+    // On amène le roll à 0 (peut etre un - a rajouter devant yaw_err)
     float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).psi()
     actuators->control[0] = yaw_err * pp.yaw_p;
 
@@ -116,7 +121,7 @@ void control_attitude(const struct manual_control_setpoint *manual_sp, const str
 int prao_control_thread_main(int argc, char *argv[])
 {
 
-    // Initialiser les structures donnes par les subscriptions
+    // Initialiser les structures donnees par les subscriptions
     struct vehicle_attitude_s att;
     memset(&att, 0, sizeof(att));
     struct vehicle_attitude_setpoint_s att_sp;
@@ -139,6 +144,11 @@ int prao_control_thread_main(int argc, char *argv[])
     for (unsigned i = 0; i < (sizeof(actuators.control) / sizeof(actuators.control[0])); i++) {
         actuators.control[i] = 0.0f;
     }
+
+
+    //Advertise that we will publish actuators values
+    orb_advert_t actuator_pub = orb_advertise(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, &actuators);
+
 
     //Faire toutes les subscriptions ( peut etre besoin de mettre un int devant )
     // Maybe limiter l'update rate avec orb_set_interval (voir dans exemples/uuv_exemple)
@@ -212,7 +222,7 @@ int prao_control_thread_main(int argc, char *argv[])
                         PX4_ISFINITE(actuators.control[1]) &&
                         PX4_ISFINITE(actuators.control[2]) &&
                         PX4_ISFINITE(actuators.control[3])) {
-                        orb_publish(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, actuator_pub, &actuators);
+                            orb_publish(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, actuator_pub, &actuators);
                     }
                         // J ai pas mis de verbose
                 }
@@ -243,7 +253,7 @@ int rover_steering_control_main(int argc, char *argv[]) {
             return 0;
         }
         thread_should_exit = false;
-        deamon_task = px4_task_spawn_cmd("rover_steering_control",
+        deamon_task = px4_task_spawn_cmd("PRAOAttitudeControl",
                                          SCHED_DEFAULT,
                                          SCHED_PRIORITY_MAX - 20,
                                          2048,
@@ -276,20 +286,6 @@ int rover_steering_control_main(int argc, char *argv[]) {
 //Advertise to actuator_topic (voir dans exemples/uuv_exemple)
 
 // Faire les update de paramètres
-
-vehicle_setpoint_poll();
-
-vehicle_accel_poll();
-
-vehicle_control_mode_poll();
-
-vehicle_manual_poll();
-
-distance_sensor_poll();
-
-vehicle_status_poll();
-
-vehicle_land_detected_poll();
 
 // Mettre les PID
 

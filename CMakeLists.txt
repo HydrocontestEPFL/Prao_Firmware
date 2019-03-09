@@ -416,7 +416,7 @@ endif()
 #=============================================================================
 # subdirectories
 #
-add_library(parameters_interface INTERFACE)
+add_library(parameters_interface INTERFACE src/modules/PRAO/PRAOAttitudeControl_params.c)
 
 include(px4_add_library)
 add_subdirectory(src/lib EXCLUDE_FROM_ALL)
