@@ -137,6 +137,9 @@ px4_add_romfs_files(
 	
 	24001_dodeca_cox
 
+	# [17000, 17999] Boat
+	17001_prao
+
 	50000_generic_ground_vehicle
 	50001_axialracing_ax10
 	50002_traxxas_stampede_2wd
