@@ -282,11 +282,3 @@ int rover_steering_control_main(int argc, char *argv[]) {
 }
 
 //////////END COMMENTS
-
-//Advertise to actuator_topic (voir dans exemples/uuv_exemple)
-
-// Faire les update de paramètres
-
-// Mettre les PID
-
-//Envoyer les commandes au moteur
