@@ -32,6 +32,8 @@
 ############################################################################
 
 px4_add_romfs_files(
+	rc.boat_apps
+	rc.boat_defaults
 	rc.fw_apps
 	rc.fw_defaults
 	rc.interface
