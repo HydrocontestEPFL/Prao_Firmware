@@ -33,6 +33,8 @@
 px4_add_module(
         MODULE modules__PRAO
         MAIN PRAO
+        STACK_MAIN 1200
+        COMPILE_FLAGS
         SRCS
             PRAOAttitudeControl.cpp
         DEPENDS
