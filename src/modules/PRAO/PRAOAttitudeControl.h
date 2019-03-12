@@ -86,6 +86,7 @@ private:
     int		_vehicle_status_sub{-1};		/**< vehicle status subscription */
 
     //Initialise la structure de parametres
+    // Peut etre besoin de mettre params juste apres struct
     struct {
         float yaw_p;
         float yaw_i;

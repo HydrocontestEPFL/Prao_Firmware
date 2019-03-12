@@ -58,7 +58,7 @@
 #include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/parameter_update.h>
 #include <parameters/param.h>
-#include <lib/ecl/geo/geo.h>
+//#include <lib/ecl/geo/geo.h>
 #include <perf/perf_counter.h>
 #include <systemlib/err.h>
 #include <matrix/math.hpp>
@@ -78,23 +78,23 @@ static int deamon_task;				/**< Handle of deamon task / thread */
 static struct params pp; // pp est le nom de la structure qui gere les params
 static struct param_handles ph; // ph est le nom de la structure qui gere le param handles
 
-//Initialise param values
+//Fonction d'initialisation des parametres
 int parameters_init(struct param_handles *h);
 {
-    _param_handles.yaw_p = param_find("PRAO_P_P");
-    _param_handles.yaw_i= param_find("PRAO_P_I");
-    _param_handles.roll_p = param_find("PRAO_R_P");
-    _param_handles.roll_i = param_find("PRAO_R_I");
+    h->yaw_p = param_find("PRAO_P_P");
+    h->yaw_i= param_find("PRAO_P_I");
+    h->roll_p = param_find("PRAO_R_P");
+    h->roll_i = param_find("PRAO_R_I");
     return OK;
 }
 
-// Updater les parametres
+// Fonction d'updating des parametres
 int parameters_update(const struct param_handles *h, struct params *p)
 {
-    param_get(_param_handles.yaw_p, &(_params.yaw_p));
-    param_get(_param_handles.yaw_i, &(_params.yaw_i));
-    param_get(_param_handles.roll_p, &(_params.roll_p));
-    param_get(_param_handles.roll_i, &(_params.roll_i));
+    param_get(h->yaw_p, &(p->yaw_p));
+    param_get(h->yaw_i, &(p->yaw_i));
+    param_get(h->roll_p, &(p->roll_p));
+    param_get(h->roll_i, &(p->roll_i));
     return OK;
 }
 
@@ -104,11 +104,11 @@ void control_attitude(const struct manual_control_setpoint *manual_sp, const str
     //Les numero de channel sont tires de actuator_controls.
 
     // On amène le roll à 0 (peut etre un - a rajouter devant yaw_err)
-    float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi() //att est le nom de la struct qui gere vehicule_attitude
+    float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
     actuators->control[0] = yaw_err * pp.yaw_p;
 
     // On amène le pitch à 0 (peut etre un - a rajouter devant pitch_err)
-    float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta()
+    float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
     actuators->control[1] = pitch_err * pp.pitch_p;
 
     //le z et y sont tires de manual_control_setpoint.msg
@@ -120,12 +120,16 @@ void control_attitude(const struct manual_control_setpoint *manual_sp, const str
 
 // Début de Johan qui fait de la merde
 
+
+
 // Fin de Johan qui fait de la merde
 }
 
 //Main thread
 int prao_control_thread_main(int argc, char *argv[])
 {
+    parameters_init(&ph);
+    parameters_update(&ph, &pp);
 
     // Initialiser les structures donnees par les subscriptions
     struct vehicle_attitude_s att;
@@ -194,7 +198,7 @@ int prao_control_thread_main(int argc, char *argv[])
                     /* if a param update occured, re-read our parameters */
                     parameters_update(&ph, &pp);
                 }
-                // Only change controller if attitude changed
+                //Only change controller if attitude changed
                 if (fds[1].revents & POLLIN) {
                     //Check what is new
                     bool pos_updated;
@@ -207,12 +211,12 @@ int prao_control_thread_main(int argc, char *argv[])
                     //Get local copy of attitude
                     orb_copy(ORB_ID(vehicle_attitude), att_sub, &att);
 
-                    //Copier l'attitude sp si il est changé
+                    //Copier l'attitude sp si il est change
                     if (att_sp_updated) {
                         orb_copy(ORB_ID(vehicle_attitude_setpoint), att_sp_sub, &_att_sp);
                     }
 
-                    //Copier le manual sp si il est changé
+                    //Copier le manual sp si il est change
                     if (manual_sp_updated){
                         orb_copy(ORB_ID(manual_control_setpoint), manual_sp_sub, &manual_sp);
                     }
