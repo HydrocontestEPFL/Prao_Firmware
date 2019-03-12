@@ -33,10 +33,10 @@
 
 #include <px4_module.h>
 #include <drivers/drv_hrt.h>
-#include <ecl/attitude_fw/ecl_pitch_controller.h>
-#include <ecl/attitude_fw/ecl_roll_controller.h>
-#include <ecl/attitude_fw/ecl_wheel_controller.h>
-#include <ecl/attitude_fw/ecl_yaw_controller.h>
+//#include <ecl/attitude_fw/ecl_pitch_controller.h>
+//#include <ecl/attitude_fw/ecl_roll_controller.h>
+//#include <ecl/attitude_fw/ecl_wheel_controller.h>
+//#include <ecl/attitude_fw/ecl_yaw_controller.h>
 #include <lib/ecl/geo/geo.h>
 #include <mathlib/mathlib.h>
 #include <matrix/math.hpp>
