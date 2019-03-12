@@ -75,8 +75,8 @@ PX4_INFO("Hello water!");
 static bool thread_should_exit = false;		/**< Daemon exit flag */
 static bool thread_running = false;		/**< Daemon status flag */
 static int deamon_task;				/**< Handle of deamon task / thread */
-static struct params pp;
-static struct param_handles ph;
+static struct params pp; // pp est le nom de la structure qui gere les params
+static struct param_handles ph; // ph est le nom de la structure qui gere le param handles
 
 //Initialise param values
 int parameters_init(struct param_handles *h);
@@ -101,20 +101,26 @@ int parameters_update(const struct param_handles *h, struct params *p)
 // Fonction de controle appelee dans le while
 void control_attitude(const struct manual_control_setpoint *manual_sp, const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators)
 {
+    //Les numero de channel sont tires de actuator_controls.
+
     // On amène le roll à 0 (peut etre un - a rajouter devant yaw_err)
-    float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).psi()
+    float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi() //att est le nom de la struct qui gere vehicule_attitude
     actuators->control[0] = yaw_err * pp.yaw_p;
 
     // On amène le pitch à 0 (peut etre un - a rajouter devant pitch_err)
-    float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).psi()
+    float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta()
     actuators->control[1] = pitch_err * pp.pitch_p;
 
+    //le z et y sont tires de manual_control_setpoint.msg
     //On controle le yaw avec la RC
-    actuators->control[3]=manual_control_setpoint
+    actuators->control[2]=manual_sp->z;
 
-    //On controle le throttle avec la RC //Je sais pas quoi mettre, je connais pas comment est structure
-    actuators->control[3]=manual_control_setpoint //Je sais pas quoi mettre, je connais pas comment est structure
+    //On controle le throttle avec la RC
+    actuators->control[3]=manual_sp->y;
 
+// Début de Johan qui fait de la merde
+
+// Fin de Johan qui fait de la merde
 }
 
 //Main thread

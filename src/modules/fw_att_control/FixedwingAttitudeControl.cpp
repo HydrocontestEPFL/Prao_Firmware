@@ -161,8 +161,7 @@ FixedwingAttitudeControl::~FixedwingAttitudeControl()
 	perf_free(_nonfinite_output_perf);
 }
 
-int
-FixedwingAttitudeControl::parameters_update()
+int FixedwingAttitudeControl::parameters_update()
 {
 	int32_t tmp = 0; //Prends les para et les met dans des variables
 	param_get(_parameter_handles.p_tc, &(_parameters.p_tc));
