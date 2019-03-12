@@ -75,8 +75,8 @@ PX4_INFO("Hello water!");
 static bool thread_should_exit = false;		/**< Daemon exit flag */
 static bool thread_running = false;		/**< Daemon status flag */
 static int deamon_task;				/**< Handle of deamon task / thread */
-static struct params pp; // pp est le nom de la structure qui gere les params
-static struct param_handles ph; // ph est le nom de la structure qui gere le param handles
+static struct _params pp; // pp est le nom de la structure qui gere les params
+static struct _param_handles ph; // ph est le nom de la structure qui gere le param handles
 
 //Fonction d'initialisation des parametres
 int parameters_init(struct param_handles *h);
@@ -162,17 +162,17 @@ int prao_control_thread_main(int argc, char *argv[])
 
     //Faire toutes les subscriptions ( peut etre besoin de mettre un int devant )
     // Maybe limiter l'update rate avec orb_set_interval (voir dans exemples/uuv_exemple)
-    int att_sub = orb_subscribe(ORB_ID(vehicle_attitude));
-    int att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
+    int _att_sub = orb_subscribe(ORB_ID(vehicle_attitude));
+    int _att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
     //int ctrl_state_sub = orb_subscribe(ORB_ID(control_state));
     //int accel_sub = orb_subscribe_multi(ORB_ID(sensor_accel), 0);
     //int vcontrol_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
     //int distance_sensor_sub = orb_subscribe(ORB_ID(distance_sensor));
-    int param_sub = orb_subscribe(ORB_ID(parameter_update));
-    int manual_sp_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
-    int global_pos_sub = orb_subscribe(ORB_ID(vehicle_global_position));
+    int _params_sub = orb_subscribe(ORB_ID(parameter_update));
+    int _manual_sp_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
+    int _global_pos_sub = orb_subscribe(ORB_ID(vehicle_global_position));
     //int local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));
-    int vehicle_status_sub = orb_subscribe(ORB_ID(vehicle_status));
+    int _vehicle_status_sub = orb_subscribe(ORB_ID(vehicle_status));
     //int vehicle_land_detected_sub = orb_subscribe(ORB_ID(vehicle_land_detected));
 
     //Setup of loop
@@ -194,7 +194,7 @@ int prao_control_thread_main(int argc, char *argv[])
                 if ( fds[0]).revents & POLLIN ){
                     //ecrire l update dans parameter_update
                     struct parameter_update_s update;
-                    orb_copy(ORB_ID(parameter_update), param_sub, &update);
+                    orb_copy(ORB_ID(parameter_update), _params_sub, &update);
                     /* if a param update occured, re-read our parameters */
                     parameters_update(&ph, &pp);
                 }
@@ -202,23 +202,23 @@ int prao_control_thread_main(int argc, char *argv[])
                 if (fds[1].revents & POLLIN) {
                     //Check what is new
                     bool pos_updated;
-                    orb_check(global_pos_sub, &pos_updated);
+                    orb_check(_global_pos_sub, &pos_updated);
                     bool att_sp_updated;
-                    orb_check(att_sp_sub, &att_sp_updated);
+                    orb_check(_att_sp_sub, &att_sp_updated);
                     bool manual_sp_updated;
-                    orb_check(manual_sp_sub, &manual_sp_updated);
+                    orb_check(_manual_sp_sub, &manual_sp_updated);
 
                     //Get local copy of attitude
-                    orb_copy(ORB_ID(vehicle_attitude), att_sub, &att);
+                    orb_copy(ORB_ID(vehicle_attitude), _att_sub, &att);
 
                     //Copier l'attitude sp si il est change
                     if (att_sp_updated) {
-                        orb_copy(ORB_ID(vehicle_attitude_setpoint), att_sp_sub, &_att_sp);
+                        orb_copy(ORB_ID(vehicle_attitude_setpoint), _att_sp_sub, &_att_sp);
                     }
 
                     //Copier le manual sp si il est change
                     if (manual_sp_updated){
-                        orb_copy(ORB_ID(manual_control_setpoint), manual_sp_sub, &manual_sp);
+                        orb_copy(ORB_ID(manual_control_setpoint), _manual_sp_sub, &manual_sp);
                     }
 
                     //Appeler la fonction qui controle les actuators

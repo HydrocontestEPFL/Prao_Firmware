@@ -92,7 +92,7 @@ private:
         float yaw_i;
         float roll_p;
         float roll_i;
-    } params{};
+    } _params{};
 
     //Initialise la structure des handles de param
     struct {
@@ -100,7 +100,7 @@ private:
         param_t yaw_i;
         param_t roll_p;
         param_t roll_i;
-    } param_handles{};
+    } _param_handles{};
 };
 
 
