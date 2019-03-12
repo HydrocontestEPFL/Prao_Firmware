@@ -79,12 +79,12 @@ px4_add_board(
 		local_position_estimator
 		logger
 		mavlink
-		mc_att_control
-		mc_pos_control
+		# mc_att_control
+		# mc_pos_control
 		navigator
 		sensors
 		vmount
-		vtol_att_control
+		# vtol_att_control
 		wind_estimator
 
 	SYSTEMCMDS
