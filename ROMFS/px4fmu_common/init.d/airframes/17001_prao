@@ -2,8 +2,8 @@
 #
 # @name PRAO
 #
-# @type boat
-# @class PRAO
+# @type Boat
+# @class Boat
 #
 # @maintainer Guillaume Rozand <guillaume.rozand@epfl.ch>
 #
