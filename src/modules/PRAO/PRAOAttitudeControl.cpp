@@ -36,6 +36,7 @@
  ****************************************************************************/
 
 #include <px4_config.h>
+#include <px4_log.h>
 #include <px4_tasks.h>
 #include <stdio.h>
 #include <stdlib.h>
