@@ -59,8 +59,8 @@
 #include <uORB/topics/parameter_update.h>
 #include <parameters/param.h>
 //#include <lib/ecl/geo/geo.h>
-#include <perf/perf_counter.h>
-#include <systemlib/err.h>
+//#include <perf/perf_counter.h>
+//#include <systemlib/err.h>
 #include <matrix/math.hpp>
 
 #include "PRAOAttitudeControl.h"
