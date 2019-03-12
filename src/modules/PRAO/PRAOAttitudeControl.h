@@ -65,7 +65,7 @@
 #ifndef FIRMWARE_PRAOATTITUDECONTROL_H
 #define FIRMWARE_PRAOATTITUDECONTROL_H
 
-using uORB::Subsciption;
+using uORB::Subscription;
 
 class PRAOAttitudeControl : public ModuleBase<PRAOAttitudeControl>
 {
