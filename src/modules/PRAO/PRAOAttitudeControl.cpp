@@ -74,11 +74,11 @@ extern "C" __EXPORT int PRAO_att_control_main(int argc, char *argv[]);
 static bool thread_should_exit = false;		/**< Daemon exit flag */
 static bool thread_running = false;		/**< Daemon status flag */
 static int deamon_task;				/**< Handle of deamon task / thread */
-static struct _params pp; // pp est le nom de la structure qui gere les params
-static struct _param_handles ph; // ph est le nom de la structure qui gere le param handles
+static struct _params; // pp est le nom de la structure qui gere les params
+static struct _param_handles; // ph est le nom de la structure qui gere le param handles
 
 //Fonction d'initialisation des parametres
-int parameters_init(struct param_handles *h);
+int parameters_init(struct _param_handles *h);
 {
     h->yaw_p = param_find("PRAO_P_P");
     h->yaw_i= param_find("PRAO_P_I");
