@@ -64,9 +64,9 @@
 //#include <systemlib/err.h>
 //#include <matrix/math.hpp>
 
-#include "PRAOAttitudeControl.h"
-
 extern "C" __EXPORT int PRAO_att_control_main(int argc, char *argv[]);
+
+#include "PRAOAttitudeControl.h"
 
 //Mettre tous les paramètres à utiliser
 
