@@ -80,10 +80,11 @@ static int deamon_task;				/**< Handle of deamon task / thread */
 //Fonction d'initialisation des parametres
 int parameters_init(struct _param_handles *h)
 {
-    h->yaw_p = param_find("PRAO_P_P");
-    h->yaw_i= param_find("PRAO_P_I");
-    h->roll_p = param_find("PRAO_R_P");
-    h->roll_i = param_find("PRAO_R_I");
+    h->yaw_p    =   param_find("PRAO_P_P");
+    h->yaw_i    =   param_find("PRAO_P_I");
+    h->roll_p   =   param_find("PRAO_R_P");
+    h->roll_i   =   param_find("PRAO_R_I");
+
     return OK;
 }
 
