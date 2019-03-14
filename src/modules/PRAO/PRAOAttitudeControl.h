@@ -68,7 +68,7 @@
 
 using uORB::Subscription;
 
-class PRAOAttitudeControl : public ModuleBase<PRAOAttitudeControl>
+class PRAOAttitudeControl final : public ModuleBase<PRAOAttitudeControl>
 {
 public:
     PRAOAttitudeControl();
