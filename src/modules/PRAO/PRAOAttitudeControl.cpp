@@ -68,8 +68,6 @@
 
 extern "C" __EXPORT int PRAO_att_control_main(int argc, char *argv[]);
 
-int parameters_init(struct _param_handles *h);
-
 //Mettre tous les paramètres à utiliser
 
 //Definit certaines variables
