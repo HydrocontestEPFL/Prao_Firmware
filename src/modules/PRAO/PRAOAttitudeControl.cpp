@@ -76,8 +76,6 @@ static bool thread_running = false;		/**< Daemon status flag */
 static int deamon_task;				/**< Handle of deamon task / thread */
 //static struct _params pp; // pp est le nom de la structure qui gere les params
 //static struct _param_handles ph; // ph est le nom de la structure qui gere le param handles
-struct *h(0);
-h = &_param_handles;
 
 //Fonction d'initialisation des parametres
 int parameters_init(struct _param_handles *h)
