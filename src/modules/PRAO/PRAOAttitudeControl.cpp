@@ -59,7 +59,7 @@
 #include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/parameter_update.h>
 #include <parameters/param.h>
-//#include <lib/ecl/geo/geo.h>
+//#include <lib/ecl/geo/geo.h>                   //Apparement ca sert a rien
 //#include <perf/perf_counter.h>
 //#include <systemlib/err.h>
 //#include <matrix/math.hpp>
@@ -67,8 +67,6 @@
 #include "PRAOAttitudeControl.h"
 
 extern "C" __EXPORT int PRAO_att_control_main(int argc, char *argv[]);
-
-PX4_INFO("Hello water!");
 
 //Mettre tous les paramètres à utiliser
 
@@ -129,6 +127,8 @@ void control_attitude(const struct manual_control_setpoint *manual_sp, const str
 //Main thread
 int prao_control_thread_main(int argc, char *argv[])
 {
+    PX4_INFO("Hello water!");
+
     parameters_init(&ph);
     parameters_update(&ph, &pp);
 
