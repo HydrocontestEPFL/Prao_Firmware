@@ -106,7 +106,7 @@ void control_attitude(const struct manual_control_setpoint *manual_sp, const str
 
     // On amène le roll à 0 (peut etre un - a rajouter devant yaw_err)
     float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-    actuators->control[0] = yaw_err * pp.yaw_p;
+    actuators->control[0] = roll_err * pp.yaw_p;
 
     // On amène le pitch à 0 (peut etre un - a rajouter devant pitch_err)
     float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
