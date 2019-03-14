@@ -36,6 +36,7 @@
  ****************************************************************************/
 
 #include <px4_config.h>
+#include <px4_log.h>
 #include <px4_tasks.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -58,16 +59,14 @@
 #include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/parameter_update.h>
 #include <parameters/param.h>
-//#include <lib/ecl/geo/geo.h>
+//#include <lib/ecl/geo/geo.h>                   //Apparement ca sert a rien
 //#include <perf/perf_counter.h>
 //#include <systemlib/err.h>
-#include <matrix/math.hpp>
-
-#include "PRAOAttitudeControl.h"
+//#include <matrix/math.hpp>
 
 extern "C" __EXPORT int PRAO_att_control_main(int argc, char *argv[]);
 
-PX4_INFO("Hello water!");
+#include "PRAOAttitudeControl.h"
 
 //Mettre tous les paramètres à utiliser
 
@@ -75,8 +74,8 @@ PX4_INFO("Hello water!");
 static bool thread_should_exit = false;		/**< Daemon exit flag */
 static bool thread_running = false;		/**< Daemon status flag */
 static int deamon_task;				/**< Handle of deamon task / thread */
-static struct _params pp; // pp est le nom de la structure qui gere les params
-static struct _param_handles ph; // ph est le nom de la structure qui gere le param handles
+//static struct _params pp; // pp est le nom de la structure qui gere les params
+//static struct _param_handles ph; // ph est le nom de la structure qui gere le param handles
 
 //Fonction d'initialisation des parametres
 int parameters_init(struct _param_handles *h)
@@ -89,7 +88,7 @@ int parameters_init(struct _param_handles *h)
 }
 
 // Fonction d'updating des parametres
-int parameters_update(const struct param_handles *h, struct params *p)
+int parameters_update(const struct _param_handles *h, struct _params *p)
 {
     param_get(h->yaw_p, &(p->yaw_p));
     param_get(h->yaw_i, &(p->yaw_i));
@@ -128,6 +127,8 @@ void control_attitude(const struct manual_control_setpoint *manual_sp, const str
 //Main thread
 int prao_control_thread_main(int argc, char *argv[])
 {
+    PX4_INFO("Hello water!");
+
     parameters_init(&ph);
     parameters_update(&ph, &pp);
 

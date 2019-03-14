@@ -32,12 +32,13 @@
  ****************************************************************************/
 
 #include <px4_module.h>
+#include <px4_module_params.h>
 #include <drivers/drv_hrt.h>
 //#include <ecl/attitude_fw/ecl_pitch_controller.h>
 //#include <ecl/attitude_fw/ecl_roll_controller.h>
 //#include <ecl/attitude_fw/ecl_wheel_controller.h>
 //#include <ecl/attitude_fw/ecl_yaw_controller.h>
-#include <lib/ecl/geo/geo.h>
+//#include <lib/ecl/geo/geo.h>
 #include <mathlib/mathlib.h>
 #include <matrix/math.hpp>
 #include <px4_config.h>
@@ -67,7 +68,7 @@
 
 using uORB::Subscription;
 
-class PRAOAttitudeControl : public ModuleBase<PRAOAttitudeControl>
+class PRAOAttitudeControl final : public ModuleBase<PRAOAttitudeControl>
 {
 public:
     PRAOAttitudeControl();
@@ -87,20 +88,20 @@ private:
 
     //Initialise la structure de parametres
     // Peut etre besoin de mettre params juste apres struct
-    struct {
+    struct _params {
         float yaw_p;
         float yaw_i;
         float roll_p;
         float roll_i;
-    } _params{};
+    };
 
     //Initialise la structure des handles de param
-    struct {
+    struct _param_handles {
         param_t yaw_p;
         param_t yaw_i;
         param_t roll_p;
         param_t roll_i;
-    } _param_handles{};
+    };
 };
 
 
