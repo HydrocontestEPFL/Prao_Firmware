@@ -35,6 +35,8 @@
  *
  ****************************************************************************/
 
+#include "PRAOAttitudeControl.h"
+
 #include <px4_config.h>
 #include <px4_log.h>
 #include <px4_tasks.h>
@@ -65,8 +67,6 @@
 //#include <matrix/math.hpp>
 
 extern "C" __EXPORT int PRAO_att_control_main(int argc, char *argv[]);
-
-#include "PRAOAttitudeControl.h"
 
 //Mettre tous les paramètres à utiliser
 
