@@ -88,7 +88,7 @@ int parameters_init(struct _param_handles *h)
 }
 
 // Fonction d'updating des parametres
-int parameters_update(const struct param_handles *h, struct params *p)
+int parameters_update(const struct _param_handles *h, struct _params *p)
 {
     param_get(h->yaw_p, &(p->yaw_p));
     param_get(h->yaw_i, &(p->yaw_i));
