@@ -88,20 +88,20 @@ private:
 
     //Initialise la structure de parametres
     // Peut etre besoin de mettre params juste apres struct
-    struct {
+    struct _params {
         float yaw_p;
         float yaw_i;
         float roll_p;
         float roll_i;
-    } _params{};
+    };
 
     //Initialise la structure des handles de param
-    struct {
+    struct _param_handles {
         param_t yaw_p;
         param_t yaw_i;
         param_t roll_p;
         param_t roll_i;
-    } _param_handles{};
+    };
 };
 
 
