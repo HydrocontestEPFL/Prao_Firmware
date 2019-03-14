@@ -78,7 +78,7 @@ static int deamon_task;				/**< Handle of deamon task / thread */
 //static struct _param_handles ph; // ph est le nom de la structure qui gere le param handles
 
 //Fonction d'initialisation des parametres
-int parameters_init(struct _param_handles *h);
+int parameters_init(struct _param_handles *h)
 {
     h->yaw_p = param_find("PRAO_P_P");
     h->yaw_i= param_find("PRAO_P_I");
