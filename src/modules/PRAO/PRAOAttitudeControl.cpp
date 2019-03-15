@@ -35,6 +35,8 @@
  *
  ****************************************************************************/
 
+#include "PRAOAttitudeControl.h"
+
 #include <px4_config.h>
 #include <px4_log.h>
 #include <px4_tasks.h>
@@ -66,8 +68,6 @@
 
 extern "C" __EXPORT int PRAO_att_control_main(int argc, char *argv[]);
 
-#include "PRAOAttitudeControl.h"
-
 //Mettre tous les paramètres à utiliser
 
 //Definit certaines variables
@@ -80,10 +80,11 @@ static int deamon_task;				/**< Handle of deamon task / thread */
 //Fonction d'initialisation des parametres
 int parameters_init(struct _param_handles *h)
 {
-    h->yaw_p = param_find("PRAO_P_P");
-    h->yaw_i= param_find("PRAO_P_I");
-    h->roll_p = param_find("PRAO_R_P");
-    h->roll_i = param_find("PRAO_R_I");
+    h->yaw_p    =   param_find("PRAO_P_P");
+    h->yaw_i    =   param_find("PRAO_P_I");
+    h->roll_p   =   param_find("PRAO_R_P");
+    h->roll_i   =   param_find("PRAO_R_I");
+
     return OK;
 }
 

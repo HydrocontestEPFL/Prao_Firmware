@@ -39,14 +39,14 @@
 //#include <ecl/attitude_fw/ecl_wheel_controller.h>
 //#include <ecl/attitude_fw/ecl_yaw_controller.h>
 //#include <lib/ecl/geo/geo.h>
-#include <mathlib/mathlib.h>
-#include <matrix/math.hpp>
+//#include <mathlib/mathlib.h>
+//#include <matrix/math.hpp>
 #include <px4_config.h>
 #include <px4_defines.h>
 #include <px4_posix.h>
 #include <px4_tasks.h>
 #include <parameters/param.h>
-#include <perf/perf_counter.h>
+//#include <perf/perf_counter.h>
 #include <uORB/Subscription.hpp>
 #include <uORB/topics/actuator_controls.h>
 #include <uORB/topics/airspeed.h>
@@ -61,7 +61,7 @@
 #include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
-#include <vtol_att_control/vtol_type.h>
+//#include <vtol_att_control/vtol_type.h>
 
 #ifndef FIRMWARE_PRAOATTITUDECONTROL_H
 #define FIRMWARE_PRAOATTITUDECONTROL_H
