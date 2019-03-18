@@ -59,7 +59,7 @@
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/uORB.h>
 
-extern "C" __EXPORT int PRAO_att_control_main(int argc, char *argv[]);
+extern "C" __EXPORT int PRAO_main(int argc, char *argv[]);
 
 //Mettre tous les paramètres à utiliser
 
@@ -150,7 +150,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 }
 
 //Main thread
-int prao_control_thread_main(int argc, char *argv[])
+int PRAO_thread_main(int argc, char *argv[])
 {
     PX4_INFO("Hello water!");
 
@@ -281,7 +281,7 @@ int prao_control_thread_main(int argc, char *argv[])
 }
 
 //Startup functions
-int rover_steering_control_main(int argc, char *argv[]) {
+int PRAO_main(int argc, char *argv[]) {
     if (argc < 2) {
         return 1;
     }
@@ -296,7 +296,7 @@ int rover_steering_control_main(int argc, char *argv[]) {
                                          SCHED_DEFAULT,
                                          SCHED_PRIORITY_MAX - 20,
                                          2048,
-                                         prao_control_thread_main,
+                                         PRAO_thread_main,
                                          (argv) ? (char *const *) &argv[2] : (char *const *) nullptr);
         thread_running = true;
         return 0;
