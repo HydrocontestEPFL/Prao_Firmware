@@ -37,45 +37,70 @@
 
 #include "PRAOAttitudeControl.h"
 
-#include <px4_config.h>
-#include <px4_log.h>
-#include <px4_tasks.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <math.h>
 #include <poll.h>
-#include <time.h>
+
 #include <drivers/drv_hrt.h>
-#include <uORB/uORB.h>
-#include <uORB/topics/vehicle_global_position.h>
+#include <lib/ecl/geo/geo.h>
+#include <matrix/math.hpp>
+#include <px4_config.h>
+#include <px4_tasks.h>
+#include <systemlib/err.h>
+#include <parameters/param.h>
+#include <perf/perf_counter.h>
+#include <uORB/topics/actuator_controls.h>
+#include <uORB/topics/manual_control_setpoint.h>
+#include <uORB/topics/parameter_update.h>
 #include <uORB/topics/position_setpoint_triplet.h>
 #include <uORB/topics/vehicle_attitude.h>
-#include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_attitude_setpoint.h>
-#include <uORB/topics/manual_control_setpoint.h>
-#include <uORB/topics/actuator_controls.h>
 #include <uORB/topics/vehicle_global_position.h>
-#include <uORB/topics/parameter_update.h>
-#include <parameters/param.h>
-//#include <lib/ecl/geo/geo.h>                   //Apparement ca sert a rien
-//#include <perf/perf_counter.h>
-//#include <systemlib/err.h>
-//#include <matrix/math.hpp>
+#include <uORB/topics/vehicle_global_position.h>
+#include <uORB/topics/vehicle_rates_setpoint.h>
+#include <uORB/topics/vehicle_status.h>
+#include <uORB/uORB.h>
 
 extern "C" __EXPORT int PRAO_att_control_main(int argc, char *argv[]);
 
 //Mettre tous les paramètres à utiliser
 
+// int		_att_sub{-1};				/**< vehicle attitude */
+// int		_att_sp_sub{-1};			/**< vehicle attitude setpoint */
+// int		_rates_sp_sub{-1};			/**< vehicle rates setpoint */
+// int		_battery_status_sub{-1};		/**< battery status subscription */
+// int		_global_pos_sub{-1};			/**< global position subscription */
+// int		_manual_sub{-1};			/**< notification of manual control updates */
+// int		_params_sub{-1};			/**< notification of parameter updates */
+// int		_vcontrol_mode_sub{-1};			/**< vehicle status subscription */
+// int		_vehicle_land_detected_sub{-1};		/**< vehicle land detected subscription */
+// int		_vehicle_status_sub{-1};		/**< vehicle status subscription */
+
+//Initialise la structure de parametres
+// Peut etre besoin de mettre params juste apres struct
+struct _params {
+    float yaw_p;
+    float yaw_i;
+    float roll_p;
+    float roll_i;
+    float pitch_p;
+    float pitch_i;
+};
+
+//Initialise la structure des handles de param
+struct _param_handles {
+    param_t yaw_p;
+    param_t yaw_i;
+    param_t roll_p;
+    param_t roll_i;
+    param_t pitch_p;
+    param_t pitch_i;
+};
+
 //Definit certaines variables
 static bool thread_should_exit = false;		/**< Daemon exit flag */
 static bool thread_running = false;		/**< Daemon status flag */
 static int deamon_task;				/**< Handle of deamon task / thread */
-//static struct _params pp; // pp est le nom de la structure qui gere les params
-//static struct _param_handles ph; // ph est le nom de la structure qui gere le param handles
+static struct _params pp; // pp est le nom de la structure qui gere les params
+static struct _param_handles ph; // ph est le nom de la structure qui gere le param handles
 
 //Fonction d'initialisation des parametres
 int parameters_init(struct _param_handles *h)
@@ -84,8 +109,7 @@ int parameters_init(struct _param_handles *h)
     h->yaw_i    =   param_find("PRAO_P_I");
     h->roll_p   =   param_find("PRAO_R_P");
     h->roll_i   =   param_find("PRAO_R_I");
-
-    return OK;
+    return 0;
 }
 
 // Fonction d'updating des parametres
@@ -95,21 +119,21 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
     param_get(h->yaw_i, &(p->yaw_i));
     param_get(h->roll_p, &(p->roll_p));
     param_get(h->roll_i, &(p->roll_i));
-    return OK;
+    return 0;
 }
 
 // Fonction de controle appelee dans le while
-void control_attitude(const struct manual_control_setpoint *manual_sp, const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators)
+void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp, const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators)
 {
     //Les numero de channel sont tires de actuator_controls.
 
     // On amène le roll à 0 (peut etre un - a rajouter devant yaw_err)
     float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-    actuators->control[0] = roll_err * pp.yaw_p;
+    actuators->control[0] = roll_err * para->roll_p;
 
     // On amène le pitch à 0 (peut etre un - a rajouter devant pitch_err)
     float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
-    actuators->control[1] = pitch_err * pp.pitch_p;
+    actuators->control[1] = pitch_err * para->pitch_p;
 
     //le z et y sont tires de manual_control_setpoint.msg
     //On controle le yaw avec la RC
@@ -164,22 +188,22 @@ int prao_control_thread_main(int argc, char *argv[])
 
     //Faire toutes les subscriptions ( peut etre besoin de mettre un int devant )
     // Maybe limiter l'update rate avec orb_set_interval (voir dans exemples/uuv_exemple)
-    int _att_sub = orb_subscribe(ORB_ID(vehicle_attitude));
-    int _att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
+    int att_sub = orb_subscribe(ORB_ID(vehicle_attitude));
+    int att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
     //int ctrl_state_sub = orb_subscribe(ORB_ID(control_state));
     //int accel_sub = orb_subscribe_multi(ORB_ID(sensor_accel), 0);
     //int vcontrol_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
     //int distance_sensor_sub = orb_subscribe(ORB_ID(distance_sensor));
-    int _params_sub = orb_subscribe(ORB_ID(parameter_update));
-    int _manual_sp_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
-    int _global_pos_sub = orb_subscribe(ORB_ID(vehicle_global_position));
+    int params_sub = orb_subscribe(ORB_ID(parameter_update));
+    int manual_sp_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
+    int global_pos_sub = orb_subscribe(ORB_ID(vehicle_global_position));
     //int local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));
-    int _vehicle_status_sub = orb_subscribe(ORB_ID(vehicle_status));
+    int vstatus_sub = orb_subscribe(ORB_ID(vehicle_status));
     //int vehicle_land_detected_sub = orb_subscribe(ORB_ID(vehicle_land_detected));
 
     //Setup of loop
     struct pollfd fds[2];
-    fds[0].fd = param_sub;
+    fds[0].fd = params_sub;
     fds[0].events = POLLIN;
     fds[1].fd = att_sub;
     fds[1].events = POLLIN;
@@ -188,15 +212,15 @@ int prao_control_thread_main(int argc, char *argv[])
         //poll waits 500ms to make fds ready, 2 is number of arguments in fds
         int ret = poll(fds,2,500);
             if (ret<0) {
-                warnx("Error de loop")
+                warnx("Error de loop");
             } else if (ret==0) {
               //Nothing has changed
             } else {
                 //Only update parameters if they have changed
-                if ( fds[0]).revents & POLLIN ){
+                if (fds[0].revents & POLLIN ) {
                     //ecrire l update dans parameter_update
                     struct parameter_update_s update;
-                    orb_copy(ORB_ID(parameter_update), _params_sub, &update);
+                    orb_copy(ORB_ID(parameter_update), params_sub, &update);
                     /* if a param update occured, re-read our parameters */
                     parameters_update(&ph, &pp);
                 }
@@ -204,27 +228,27 @@ int prao_control_thread_main(int argc, char *argv[])
                 if (fds[1].revents & POLLIN) {
                     //Check what is new
                     bool pos_updated;
-                    orb_check(_global_pos_sub, &pos_updated);
+                    orb_check(global_pos_sub, &pos_updated);
                     bool att_sp_updated;
-                    orb_check(_att_sp_sub, &att_sp_updated);
+                    orb_check(att_sp_sub, &att_sp_updated);
                     bool manual_sp_updated;
-                    orb_check(_manual_sp_sub, &manual_sp_updated);
+                    orb_check(manual_sp_sub, &manual_sp_updated);
 
                     //Get local copy of attitude
-                    orb_copy(ORB_ID(vehicle_attitude), _att_sub, &att);
+                    orb_copy(ORB_ID(vehicle_attitude), att_sub, &att);
 
                     //Copier l'attitude sp si il est change
                     if (att_sp_updated) {
-                        orb_copy(ORB_ID(vehicle_attitude_setpoint), _att_sp_sub, &_att_sp);
+                        orb_copy(ORB_ID(vehicle_attitude_setpoint), att_sp_sub, &att_sp);
                     }
 
                     //Copier le manual sp si il est change
                     if (manual_sp_updated){
-                        orb_copy(ORB_ID(manual_control_setpoint), _manual_sp_sub, &manual_sp);
+                        orb_copy(ORB_ID(manual_control_setpoint), manual_sp_sub, &manual_sp);
                     }
 
                     //Appeler la fonction qui controle les actuators
-                    control_attitude(&manual_sp, &att, &actuators);
+                    control_attitude(&pp, &manual_sp, &att, &actuators);
 
                     //Get vehicule status
                     orb_copy(ORB_ID(vehicle_status), vstatus_sub, &vstatus);
@@ -239,6 +263,7 @@ int prao_control_thread_main(int argc, char *argv[])
                         // J ai pas mis de verbose
                 }
             }
+
     }
     warnx("Exiting, stopping all motors");
     thread_running = false;
@@ -251,6 +276,8 @@ int prao_control_thread_main(int argc, char *argv[])
     actuators.timestamp = hrt_absolute_time();
 
     orb_publish(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, actuator_pub, &actuators);
+
+    return 0;
 }
 
 //Startup functions
