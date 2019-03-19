@@ -184,6 +184,8 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
     actuators->control[1] = pitch_err * para->pitch_p;
 
     // Johan controle le pitch
+
+
     // get le airspeed
     // Fabrication du scaler
     float pitch_scaler = 1.0f;
@@ -198,10 +200,13 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
     float pitch_prop = pitch_err * para->pitch_p;
 
     //Terme intégrateur
-    float pitch_int = pitch_int + pitch_err;
+    float pitch_int = pitch_int + pitch_err * para->pitch_i;
 
     //Calcul du output final
     float pitch_output = (pitch_int + pitch_prop) * pitch_scaler;
+    actuators->control[1]= pitch_output;
+
+
     // Johan arrete de controller le pitch
 
     //le z et y sont tires de manual_control_setpoint.msg
