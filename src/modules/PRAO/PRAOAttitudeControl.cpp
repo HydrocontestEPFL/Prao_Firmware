@@ -59,41 +59,49 @@
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/uORB.h>
 
+/* Prototypes copiés de main.cpp dans l'example fixedwing_control */
+
+/**
+ * Initialize all parameter handles and values
+ *
+ */
+extern "C" int parameters_init(struct param_handles *h);
+
+/**
+ * Update all parameters
+ *
+ */
+extern "C" int parameters_update(const struct param_handles *h, struct params *p);
+
+/**
+ * Daemon management function.
+ *
+ * This function allows to start / stop the background task (daemon).
+ * The purpose of it is to be able to start the controller on the
+ * command line, query its status and stop it, without giving up
+ * the command line to one particular process or the need for bg/fg
+ * ^Z support by the shell.
+ */
 extern "C" __EXPORT int PRAO_main(int argc, char *argv[]);
 
-//Mettre tous les paramètres à utiliser
+/**
+ * Mainloop of daemon.
+ */
+int PRAO_thread_main(int argc, char *argv[]);
 
-// int		_att_sub{-1};				/**< vehicle attitude */
-// int		_att_sp_sub{-1};			/**< vehicle attitude setpoint */
-// int		_rates_sp_sub{-1};			/**< vehicle rates setpoint */
-// int		_battery_status_sub{-1};		/**< battery status subscription */
-// int		_global_pos_sub{-1};			/**< global position subscription */
-// int		_manual_sub{-1};			/**< notification of manual control updates */
-// int		_params_sub{-1};			/**< notification of parameter updates */
-// int		_vcontrol_mode_sub{-1};			/**< vehicle status subscription */
-// int		_vehicle_land_detected_sub{-1};		/**< vehicle land detected subscription */
-// int		_vehicle_status_sub{-1};		/**< vehicle status subscription */
+int parameters_init(struct param_handles *h);
 
-//Initialise la structure de parametres
-// Peut etre besoin de mettre params juste apres struct
-struct _params {
-    float yaw_p;
-    float yaw_i;
-    float roll_p;
-    float roll_i;
-    float pitch_p;
-    float pitch_i;
-};
+/**
+ * Update all parameters
+ *
+ */
+int parameters_update(const struct param_handles *h, struct params *p);
 
-//Initialise la structure des handles de param
-struct _param_handles {
-    param_t yaw_p;
-    param_t yaw_i;
-    param_t roll_p;
-    param_t roll_i;
-    param_t pitch_p;
-    param_t pitch_i;
-};
+/**
+ * Basic control function
+ */
+void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
+        const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators);
 
 //Definit certaines variables
 static bool thread_should_exit = false;		/**< Daemon exit flag */
@@ -105,10 +113,12 @@ static struct _param_handles ph; // ph est le nom de la structure qui gere le pa
 //Fonction d'initialisation des parametres
 int parameters_init(struct _param_handles *h)
 {
-    h->yaw_p    =   param_find("PRAO_P_P");
-    h->yaw_i    =   param_find("PRAO_P_I");
+    h->yaw_p    =   param_find("PRAO_Y_P");
+    h->yaw_i    =   param_find("PRAO_Y_I");
     h->roll_p   =   param_find("PRAO_R_P");
     h->roll_i   =   param_find("PRAO_R_I");
+    h->pitch_p  =   param_find("PRAO_P_P");
+    h->pitch_i  =   param_find("PRAO_P_I");
     return 0;
 }
 
@@ -123,13 +133,44 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
 }
 
 // Fonction de controle appelee dans le while
-void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp, const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators)
+void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
+        const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators)
 {
     //Les numero de channel sont tires de actuator_controls.
 
     // On amène le roll à 0 (peut etre un - a rajouter devant yaw_err)
     float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-    actuators->control[0] = roll_err * para->roll_p;
+    //DEBUT MODIF Fab
+    /* get the usual dt estimate */
+    uint64_t dt_micros = ecl_elapsed_time(&_last_run);
+    _last_run = ecl_absolute_time();
+    float dt = (float)dt_micros * 1e-6f;
+    /* lock integral for long intervals */
+    bool lock_integrator = ctl_data.lock_integrator;
+    if (dt_micros > 500000) {
+        lock_integrator = true;
+    }
+    /* input conditioning */
+    float airspeed = ctl_data.airspeed;
+    if (!lock_integrator && para->roll_i > 0.0f && airspeed > 0.5f * ctl_data.airspeed_min) {
+        float id = roll_error * dt;
+        /*
+         * anti-windup: do not allow integrator to increase if actuator is at limit
+         */
+        if (_last_output < -1.0f) {
+            /* only allow motion to center: increase value */
+            id = math::max(id, 0.0f);
+        } else if (_last_output > 1.0f) {
+            /* only allow motion to center: decrease value */
+            id = math::min(id, 0.0f);
+        }
+        /* add and constrain */
+        _integrator = math::constrain(_integrator + id * para->roll_i, -_integrator_max, _integrator_max);
+    }
+    //Fin modifs Fab
+
+    actuators->control[0] = (roll_err * para->roll_p + _integrator)* ctl_data.scaler *
+                            ctl_data.scaler;
 
     // On amène le pitch à 0 (peut etre un - a rajouter devant pitch_err)
     float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
@@ -141,12 +182,6 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
     //On controle le throttle avec la RC
     actuators->control[3]=manual_sp->y;
-
-// Début de Johan qui fait de la merde
-
-
-
-// Fin de Johan qui fait de la merde
 }
 
 //Main thread
