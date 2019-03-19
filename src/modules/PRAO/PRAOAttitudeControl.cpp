@@ -140,7 +140,37 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
     // On amène le roll à 0 (peut etre un - a rajouter devant yaw_err)
     float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-    actuators->control[0] = roll_err * para->roll_p;
+    //DEBUT MODIF Fab
+    /* get the usual dt estimate */
+    uint64_t dt_micros = ecl_elapsed_time(&_last_run);
+    _last_run = ecl_absolute_time();
+    float dt = (float)dt_micros * 1e-6f;
+    /* lock integral for long intervals */
+    bool lock_integrator = ctl_data.lock_integrator;
+    if (dt_micros > 500000) {
+        lock_integrator = true;
+    }
+    /* input conditioning */
+    float airspeed = ctl_data.airspeed;
+    if (!lock_integrator && para->roll_i > 0.0f && airspeed > 0.5f * ctl_data.airspeed_min) {
+        float id = roll_error * dt;
+        /*
+         * anti-windup: do not allow integrator to increase if actuator is at limit
+         */
+        if (_last_output < -1.0f) {
+            /* only allow motion to center: increase value */
+            id = math::max(id, 0.0f);
+        } else if (_last_output > 1.0f) {
+            /* only allow motion to center: decrease value */
+            id = math::min(id, 0.0f);
+        }
+        /* add and constrain */
+        _integrator = math::constrain(_integrator + id * para->roll_i, -_integrator_max, _integrator_max);
+    }
+    //Fin modifs Fab
+
+    actuators->control[0] = (roll_err * para->roll_p + _integrator)* ctl_data.scaler *
+                            ctl_data.scaler;
 
     // On amène le pitch à 0 (peut etre un - a rajouter devant pitch_err)
     float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();

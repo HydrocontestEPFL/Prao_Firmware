@@ -55,6 +55,12 @@
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
 
+// Modif Fab
+#include <stdio.h>
+#include <mathlib/mathlib.h>
+//#include <ecl.h>
+//Fin modif Fab
+
 using matrix::Eulerf;
 using matrix::Quatf;
 
@@ -80,3 +86,43 @@ struct _param_handles {
     param_t pitch_p;
     param_t pitch_i;
 };
+
+// MODIFIE LE HEADER FAB
+struct PRAO_ControlData {
+    float airspeed_min;
+    float airspeed_max;
+    float airspeed;
+    float scaler;
+    bool lock_integrator;
+};
+class PRAOAttitudeControl_Controller
+{
+// public:
+    PRAOAttitudeControl_Controller(const char *name);
+    virtual ~PRAOAttitudeControl_Controller() = default;
+    virtual float control_attitude(const struct PRAO_ControlData &ctl_data) = 0;
+    virtual float control_euler_rate(const struct PRAO_ControlData &ctl_data) = 0;
+    virtual float control_bodyrate(const struct PRAO_ControlData &ctl_data) = 0;
+    /* Setters */
+    void set_integrator_max(float max);
+    /* Getters */ /*
+    float get_rate_error();
+    float get_desired_rate();
+    float get_desired_bodyrate();
+    float get_integrator();
+    void reset_integrator(); */
+// protected:
+    uint64_t _last_run;
+    float _integrator_max;
+    float _last_output;
+    float _integrator;
+    float constrain_airspeed(float airspeed, float minspeed, float maxspeed);
+};
+PRAOAttitudeControl_Controller::PRAOAttitudeControl_Controller(const char *name) :
+        _last_run(0),
+        _integrator_max(0.0f),
+        _last_output(0.0f),
+        _integrator(0.0f)
+{
+}
+// FIN MODIF HEADER FAB
