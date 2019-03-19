@@ -199,7 +199,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
     float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
     float pitch_prop = pitch_err * para->pitch_p;
 
-    //Terme intégrateur ( integrator may pas encore defini
+    //Terme intégrateur ( integrator may pas encore defini )
     float pitch_int = math::constrain(pitch_int + pitch_err * para->pitch_i, -_integrator_max, _integrator_max);
 
     //Calcul du output final
