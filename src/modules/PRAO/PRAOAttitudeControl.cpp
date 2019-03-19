@@ -107,7 +107,7 @@ int parameters_update(const struct param_handles *h, struct params *p);
  * Basic control function
  */
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
-        const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators);
+        const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators, struct airspeed_s *airspd);
 
 //Definit certaines variables
 static bool thread_should_exit = false;		/**< Daemon exit flag */
@@ -140,7 +140,7 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
 
 // Fonction de controle appelee dans le while
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
-        const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators)
+        const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators, struct airspeed_s *airspd)
 {
     //Les numero de channel sont tires de actuator_controls.
 
@@ -238,6 +238,8 @@ int PRAO_thread_main(int argc, char *argv[])
     memset(&vstatus, 0, sizeof(vstatus));
     struct position_setpoint_s global_sp;
     memset(&global_sp, 0, sizeof(global_sp));
+    struct airspeed_s airspd;
+    memset(&airspd, 0, sizeof(airspd));
 
     // Initialisation des output structures
     struct actuator_controls_s actuators;
@@ -268,6 +270,7 @@ int PRAO_thread_main(int argc, char *argv[])
     //int local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));
     int vstatus_sub = orb_subscribe(ORB_ID(vehicle_status));
     //int vehicle_land_detected_sub = orb_subscribe(ORB_ID(vehicle_land_detected));
+    int airspeed_sub = orb_subscribe(ORB_ID(airspeed));
 
     //Setup of loop
     struct pollfd fds[2];
@@ -301,6 +304,8 @@ int PRAO_thread_main(int argc, char *argv[])
                     orb_check(att_sp_sub, &att_sp_updated);
                     bool manual_sp_updated;
                     orb_check(manual_sp_sub, &manual_sp_updated);
+                    bool airspeed_updated;
+                    orb_check(airspeed_sub, &airspeed_updated);
 
                     //Get local copy of attitude
                     orb_copy(ORB_ID(vehicle_attitude), att_sub, &att);
@@ -315,8 +320,13 @@ int PRAO_thread_main(int argc, char *argv[])
                         orb_copy(ORB_ID(manual_control_setpoint), manual_sp_sub, &manual_sp);
                     }
 
+                    //Copier aispeed si changé
+                    if (airspeed_updated){
+                        orb_copy(ORB_ID(airspeed), airspeed_sub, &airspd);
+                    }
+
                     //Appeler la fonction qui controle les actuators
-                    control_attitude(&pp, &manual_sp, &att, &actuators);
+                    control_attitude(&pp, &manual_sp, &att, &actuators, &airspd);
 
                     //Get vehicule status
                     orb_copy(ORB_ID(vehicle_status), vstatus_sub, &vstatus);
