@@ -59,6 +59,12 @@
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/uORB.h>
 
+// Pour le contrôle
+#include <math.h>
+#include <float.h>
+#include <geo/geo.h>
+#include <mathlib/mathlib.h>
+
 /* Prototypes copiés de main.cpp dans l'example fixedwing_control */
 
 /**
@@ -140,6 +146,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
     // On amène le roll à 0 (peut etre un - a rajouter devant yaw_err)
     float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
+
     //DEBUT MODIF Fab
     /* get the usual dt estimate */
     uint64_t dt_micros = ecl_elapsed_time(&_last_run);
@@ -167,14 +174,35 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         /* add and constrain */
         _integrator = math::constrain(_integrator + id * para->roll_i, -_integrator_max, _integrator_max);
     }
-    //Fin modifs Fab
 
     actuators->control[0] = (roll_err * para->roll_p + _integrator)* ctl_data.scaler *
                             ctl_data.scaler;
+    //Fin modifs Fab
 
     // On amène le pitch à 0 (peut etre un - a rajouter devant pitch_err)
     float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
     actuators->control[1] = pitch_err * para->pitch_p;
+
+    // Johan controle le pitch
+    // get le airspeed
+    // Fabrication du scaler
+    float pitch_scaler = 1.0f;
+    if (airspeed < 1) {
+        pitch_scaler = 1.0f;
+    } else if {
+        pitch_scaler = 1.0f / airspeed;
+    }
+
+    //Terme proportionnel
+    float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
+    float pitch_prop = pitch_err * para->pitch_p;
+
+    //Terme intégrateur
+    float pitch_int = pitch_int + pitch_err;
+
+    //Calcul du output final
+    float pitch_output = (pitch_int + pitch_prop) * pitch_scaler;
+    // Johan arrete de controller le pitch
 
     //le z et y sont tires de manual_control_setpoint.msg
     //On controle le yaw avec la RC
