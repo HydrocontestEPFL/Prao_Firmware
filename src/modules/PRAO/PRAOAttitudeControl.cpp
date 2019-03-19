@@ -62,7 +62,7 @@
 // Pour le contrôle
 #include <math.h>
 #include <float.h>
-#include <geo/geo.h>
+//#include <geo/geo.h>
 #include <mathlib/mathlib.h>
 
 /* Prototypes copiés de main.cpp dans l'example fixedwing_control */
