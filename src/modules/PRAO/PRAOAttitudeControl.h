@@ -34,19 +34,12 @@
 #include <px4_module.h>
 #include <px4_module_params.h>
 #include <drivers/drv_hrt.h>
-//#include <ecl/attitude_fw/ecl_pitch_controller.h>
-//#include <ecl/attitude_fw/ecl_roll_controller.h>
-//#include <ecl/attitude_fw/ecl_wheel_controller.h>
-//#include <ecl/attitude_fw/ecl_yaw_controller.h>
-//#include <lib/ecl/geo/geo.h>
-//#include <mathlib/mathlib.h>
-//#include <matrix/math.hpp>
 #include <px4_config.h>
 #include <px4_defines.h>
+#include <matrix/math.hpp>
 #include <px4_posix.h>
 #include <px4_tasks.h>
 #include <parameters/param.h>
-//#include <perf/perf_counter.h>
 #include <uORB/Subscription.hpp>
 #include <uORB/topics/actuator_controls.h>
 #include <uORB/topics/airspeed.h>
@@ -61,48 +54,29 @@
 #include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
-//#include <vtol_att_control/vtol_type.h>
 
-#ifndef FIRMWARE_PRAOATTITUDECONTROL_H
-#define FIRMWARE_PRAOATTITUDECONTROL_H
+using matrix::Eulerf;
+using matrix::Quatf;
 
 using uORB::Subscription;
 
-class PRAOAttitudeControl final : public ModuleBase<PRAOAttitudeControl>
-{
-public:
-    PRAOAttitudeControl();
-
-private:
-
-    int		_att_sub{-1};				/**< vehicle attitude */
-    int		_att_sp_sub{-1};			/**< vehicle attitude setpoint */
-    int		_rates_sp_sub{-1};			/**< vehicle rates setpoint */
-    int		_battery_status_sub{-1};		/**< battery status subscription */
-    int		_global_pos_sub{-1};			/**< global position subscription */
-    int		_manual_sub{-1};			/**< notification of manual control updates */
-    int		_params_sub{-1};			/**< notification of parameter updates */
-    int		_vcontrol_mode_sub{-1};			/**< vehicle status subscription */
-    int		_vehicle_land_detected_sub{-1};		/**< vehicle land detected subscription */
-    int		_vehicle_status_sub{-1};		/**< vehicle status subscription */
-
-    //Initialise la structure de parametres
-    // Peut etre besoin de mettre params juste apres struct
-    struct _params {
-        float yaw_p;
-        float yaw_i;
-        float roll_p;
-        float roll_i;
-    };
-
-    //Initialise la structure des handles de param
-    struct _param_handles {
-        param_t yaw_p;
-        param_t yaw_i;
-        param_t roll_p;
-        param_t roll_i;
-    };
+//Initialise la structure de parametres
+// Peut etre besoin de mettre params juste apres struct
+struct _params {
+    float yaw_p;
+    float yaw_i;
+    float roll_p;
+    float roll_i;
+    float pitch_p;
+    float pitch_i;
 };
 
-
-#endif //FIRMWARE_PRAOATTITUDECONTROL_H
+//Initialise la structure des handles de param
+struct _param_handles {
+    param_t yaw_p;
+    param_t yaw_i;
+    param_t roll_p;
+    param_t roll_i;
+    param_t pitch_p;
+    param_t pitch_i;
+};
