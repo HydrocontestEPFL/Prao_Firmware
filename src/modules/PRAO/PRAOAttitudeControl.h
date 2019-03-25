@@ -75,6 +75,11 @@ struct _params {
     float roll_i;
     float pitch_p;
     float pitch_i;
+    float int_max_pitch;
+    float int_max_roll;
+    float pitch_scl;
+    float roll_scl;
+    float mode;
 };
 
 //Initialise la structure des handles de param
@@ -85,6 +90,11 @@ struct _param_handles {
     param_t roll_i;
     param_t pitch_p;
     param_t pitch_i;
+    param_t int_max_pitch;
+    param_t int_max_roll;
+    param_t pitch_scl;
+    param_t roll_scl;
+    param_t mode;
 };
 
 // MODIFIE LE HEADER FAB

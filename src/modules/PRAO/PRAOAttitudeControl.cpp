@@ -125,6 +125,11 @@ int parameters_init(struct _param_handles *h)
     h->roll_i   =   param_find("PRAO_R_I");
     h->pitch_p  =   param_find("PRAO_P_P");
     h->pitch_i  =   param_find("PRAO_P_I");
+    h->int_max_pitch    =   param_find("PRAO_INT_MAX_PITCH");
+    h->int_max_roll    =   param_find("PRAO_INT_MAX_ROLL");
+    h->pitch_scl    =   param_find("PRAO_P_SCALER");
+    h->roll_scl    =   param_find("PRAO_R_SCALER");
+    h->mode    =   param_find("PRAO_MODE");
     return 0;
 }
 
@@ -135,6 +140,13 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
     param_get(h->yaw_i, &(p->yaw_i));
     param_get(h->roll_p, &(p->roll_p));
     param_get(h->roll_i, &(p->roll_i));
+    param_get(h->pitch_p, &(p->pitch_p));
+    param_get(h->pitch_i, &(p->pitch_i));
+    param_get(h->int_max_pitch, &(p->int_max_pitch));
+    param_get(h->int_max_roll, &(p->int_max_roll));
+    param_get(h->pitch_scl, &(p->pitch_scl));
+    param_get(h->roll_scl, &(p->roll_scl));
+    param_get(h->mode, &(p->mode));
     return 0;
 }
 
@@ -142,79 +154,110 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
         const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators, struct airspeed_s *airspd)
 {
-    //Les numero de channel sont tires de actuator_controls.
+    //Les numeros de channel sont tires de actuator_controls.
 
-    // On amène le roll à 0 (peut etre un - a rajouter devant yaw_err)
-    float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-
-    //DEBUT MODIF Fab
-    /* get the usual dt estimate */
+    /* DEBUT MODIF Fab
+    //get the usual dt estimate
     uint64_t dt_micros = ecl_elapsed_time(&_last_run);
     _last_run = ecl_absolute_time();
     float dt = (float)dt_micros * 1e-6f;
-    /* lock integral for long intervals */
+    //lock integral for long intervals
     bool lock_integrator = ctl_data.lock_integrator;
     if (dt_micros > 500000) {
         lock_integrator = true;
     }
-    /* input conditioning */
+    //input conditioning
     float airspeed = ctl_data.airspeed;
     if (!lock_integrator && para->roll_i > 0.0f && airspeed > 0.5f * ctl_data.airspeed_min) {
         float id = roll_error * dt;
-        /*
-         * anti-windup: do not allow integrator to increase if actuator is at limit
-         */
-        if (_last_output < -1.0f) {
-            /* only allow motion to center: increase value */
+
+    //anti-windup: do not allow integrator to increase if actuator is at limit
+
+    if (_last_output < -1.0f) {
+             //only allow motion to center: increase value
             id = math::max(id, 0.0f);
         } else if (_last_output > 1.0f) {
-            /* only allow motion to center: decrease value */
+             //only allow motion to center: decrease value
             id = math::min(id, 0.0f);
         }
-        /* add and constrain */
+         //add and constrain
         _integrator = math::constrain(_integrator + id * para->roll_i, -_integrator_max, _integrator_max);
     }
 
     actuators->control[0] = (roll_err * para->roll_p + _integrator)* ctl_data.scaler *
                             ctl_data.scaler;
-    //Fin modifs Fab
+    //Fin modifs Fab */
 
+    /* ANCIEN CONTROLE
     // On amène le pitch à 0 (peut etre un - a rajouter devant pitch_err)
     float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
     actuators->control[1] = pitch_err * para->pitch_p;
+    */
 
-    // Johan controle le pitch
+    if (para->mode > 0.5f){
+
+        // get le airspeed sans aller à l'infini
+        float airspeed_ctrl = 1.0f;
+        if (airspd->true_airspeed_m_s < 1) {
+            airspeed_ctrl = 1.0f;
+        } else if {
+            airspeed_ctrl=airspd->true_airspeed_m_s;
+        }
+
+        //Controle du roll
+        //Faire le scaler
+        float roll_scaler = para->roll_scl / airspeed_ctrl;
+
+        // Terme proportionnel (peut etre un - a rajouter devant yaw_err)
+        float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
+        float roll_prop = roll_err * para->roll_p;
+
+        //Terme integrateur
+        float roll_int = math::constrain(roll_int + roll_err * para->roll_i, -int_max_roll, int_max_roll);
+
+        //Calcul du output final
+        float roll_output = (roll_int + roll_prop) * roll_scaler;
+        actuators->control[1]= roll_output;
 
 
-    // get le airspeed
-    // Fabrication du scaler
-    float pitch_scaler = 1.0f;
-    if (airspeed < 1) {
-        pitch_scaler = 1.0f;
-    } else if {
-        pitch_scaler = 1.0f / airspeed;
+        //Controle du pitch
+        //Faire le scaler
+        float pitch_scaler = para->pitch_scl / airspeed_ctrl;
+
+        //Terme proportionnel
+        float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
+        float pitch_prop = pitch_err * para->pitch_p;
+
+        //Terme intégrateur ( integrator max pas encore defini )
+        float pitch_int = math::constrain(pitch_int + pitch_err * para->pitch_i, -int_max_pitch, int_max_pitch);
+
+        //Calcul du output final
+        float pitch_output = (pitch_int + pitch_prop) * pitch_scaler;
+        actuators->control[1]= pitch_output;
+
+
+        //le z et y sont tires de manual_control_setpoint.msg
+        //On controle le yaw avec la RC
+        actuators->control[2]=manual_sp->z;
+
+
+        //On controle le throttle avec la RC
+        actuators->control[3]=manual_sp->y;
     }
 
-    //Terme proportionnel
-    float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
-    float pitch_prop = pitch_err * para->pitch_p;
+    else {
+        //On controle le roll avec la RC
+        actuators->control[0]=manual_sp->y;
 
-    //Terme intégrateur ( integrator may pas encore defini )
-    float pitch_int = math::constrain(pitch_int + pitch_err * para->pitch_i, -_integrator_max, _integrator_max);
+        //On controle le pitch avec la RC
+        actuators->control[1]=manual_sp->x;
 
-    //Calcul du output final
-    float pitch_output = (pitch_int + pitch_prop) * pitch_scaler;
-    actuators->control[1]= pitch_output;
+        //On controle le yaw avec la RC
+        actuators->control[2]=manual_sp->r;
 
-
-    // Johan arrete de controller le pitch
-
-    //le z et y sont tires de manual_control_setpoint.msg
-    //On controle le yaw avec la RC
-    actuators->control[2]=manual_sp->z;
-
-    //On controle le throttle avec la RC
-    actuators->control[3]=manual_sp->y;
+        //On controle le throttle avec la RC
+        actuators->control[3]=manual_sp->z;
+    }
 }
 
 //Main thread
