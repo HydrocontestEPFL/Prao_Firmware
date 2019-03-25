@@ -19,10 +19,6 @@ sh /etc/init.d/rc.boat_defaults
 
 if [$AUTOCNF = yes]
 then
-        param set PRAO_P_P 1
-        param set PRAO_P_I 1
-        param set PRAO_R_P 1
-        param set PRAO_R_I 1
         param set PWM_DISARMED 0
         param set PWM_MIN 1000
         param set PWM_MAX 2000
@@ -31,7 +27,7 @@ fi
 # Configure this as fixed wing
 set MAV_TYPE 11
 
-//Set mixer
+# Set mixer
 set MIXER prao
 
 # PWM
