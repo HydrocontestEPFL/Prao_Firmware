@@ -219,7 +219,6 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         float roll_output = (roll_int + roll_prop) * roll_scaler;
         actuators->control[1]= roll_output;
 
-
         //Controle du pitch
         //Faire le scaler
         float pitch_scaler = para->pitch_scl / airspeed_ctrl;
