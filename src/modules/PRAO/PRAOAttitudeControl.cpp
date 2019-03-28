@@ -188,64 +188,16 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
                             ctl_data.scaler;
     //Fin modifs Fab */
 
-    /* ANCIEN CONTROLE
+    // ANCIEN CONTROLE
     // On amène le pitch à 0 (peut etre un - a rajouter devant pitch_err)
-    float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
-    actuators->control[1] = pitch_err * para->pitch_p;
-    */
-
-    if (para->mode > 0.5f){
-
-        // get le airspeed sans aller à l'infini
-        float airspeed_ctrl = 1.0f;
-        if (airspd->true_airspeed_m_s < 1) {
-            airspeed_ctrl = 1.0f;
-        } else if {
-            airspeed_ctrl=airspd->true_airspeed_m_s;
-        }
-
-        //Controle du roll
-        //Faire le scaler
-        float roll_scaler = para->roll_scl / airspeed_ctrl;
-
-        // Terme proportionnel (peut etre un - a rajouter devant yaw_err)
-        float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-        float roll_prop = roll_err * para->roll_p;
-
-        //Terme integrateur
-        float roll_int = math::constrain(roll_int + roll_err * para->roll_i, -int_max_roll, int_max_roll);
-
-        //Calcul du output final
-        float roll_output = (roll_int + roll_prop) * roll_scaler;
-        actuators->control[1]= roll_output;
+    //float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
+    //actuators->control[1] = pitch_err * para->pitch_p;
 
 
-        //Controle du pitch
-        //Faire le scaler
-        float pitch_scaler = para->pitch_scl / airspeed_ctrl;
-
-        //Terme proportionnel
-        float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
-        float pitch_prop = pitch_err * para->pitch_p;
-
-        //Terme intégrateur ( integrator max pas encore defini )
-        float pitch_int = math::constrain(pitch_int + pitch_err * para->pitch_i, -int_max_pitch, int_max_pitch);
-
-        //Calcul du output final
-        float pitch_output = (pitch_int + pitch_prop) * pitch_scaler;
-        actuators->control[1]= pitch_output;
-
-
-        //le z et y sont tires de manual_control_setpoint.msg
-        //On controle le yaw avec la RC
-        actuators->control[2]=manual_sp->z;
-
-
-        //On controle le throttle avec la RC
-        actuators->control[3]=manual_sp->y;
+    if (para->mode > 0.5f && false) {
     }
-
     else {
+        PX4_INFO("Throttle %f\n", (double) manual_sp->z);
         //On controle le roll avec la RC
         actuators->control[0]=manual_sp->y;
 
@@ -296,7 +248,7 @@ int PRAO_thread_main(int argc, char *argv[])
 
 
     //Advertise that we will publish actuators values
-    orb_advert_t actuator_pub = orb_advertise(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, &actuators);
+    orb_advert_t actuator_pub = orb_advertise(ORB_ID(actuator_controls_0), &actuators);
 
 
     //Faire toutes les subscriptions ( peut etre besoin de mettre un int devant )
@@ -325,65 +277,66 @@ int PRAO_thread_main(int argc, char *argv[])
     while (!thread_should_exit) {
         //poll waits 500ms to make fds ready, 2 is number of arguments in fds
         int ret = poll(fds,2,500);
-            if (ret<0) {
-                warnx("Error de loop");
-            } else if (ret==0) {
-              //Nothing has changed
-            } else {
-                //Only update parameters if they have changed
-                if (fds[0].revents & POLLIN ) {
-                    //ecrire l update dans parameter_update
-                    struct parameter_update_s update;
-                    orb_copy(ORB_ID(parameter_update), params_sub, &update);
-                    /* if a param update occured, re-read our parameters */
-                    parameters_update(&ph, &pp);
-                }
-                //Only change controller if attitude changed
-                if (fds[1].revents & POLLIN) {
-                    //Check what is new
-                    bool pos_updated;
-                    orb_check(global_pos_sub, &pos_updated);
-                    bool att_sp_updated;
-                    orb_check(att_sp_sub, &att_sp_updated);
-                    bool manual_sp_updated;
-                    orb_check(manual_sp_sub, &manual_sp_updated);
-                    bool airspeed_updated;
-                    orb_check(airspeed_sub, &airspeed_updated);
 
-                    //Get local copy of attitude
-                    orb_copy(ORB_ID(vehicle_attitude), att_sub, &att);
-
-                    //Copier l'attitude sp si il est change
-                    if (att_sp_updated) {
-                        orb_copy(ORB_ID(vehicle_attitude_setpoint), att_sp_sub, &att_sp);
-                    }
-
-                    //Copier le manual sp si il est change
-                    if (manual_sp_updated){
-                        orb_copy(ORB_ID(manual_control_setpoint), manual_sp_sub, &manual_sp);
-                    }
-
-                    //Copier aispeed si changé
-                    if (airspeed_updated){
-                        orb_copy(ORB_ID(airspeed), airspeed_sub, &airspd);
-                    }
-
-                    //Appeler la fonction qui controle les actuators
-                    control_attitude(&pp, &manual_sp, &att, &actuators, &airspd);
-
-                    //Get vehicule status
-                    orb_copy(ORB_ID(vehicle_status), vstatus_sub, &vstatus);
-
-                    //Sanity check then publish actuators outputs
-                    if (PX4_ISFINITE(actuators.control[0]) &&
-                        PX4_ISFINITE(actuators.control[1]) &&
-                        PX4_ISFINITE(actuators.control[2]) &&
-                        PX4_ISFINITE(actuators.control[3])) {
-                            orb_publish(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, actuator_pub, &actuators);
-                    }
-                        // J ai pas mis de verbose
-                }
+        if (ret<0) {
+            warnx("Error de loop");
+        } else if (ret==0) {
+          //Nothing has changed
+        } else {
+            //Only update parameters if they have changed
+            if (fds[0].revents & POLLIN ) {
+                //ecrire l update dans parameter_update
+                struct parameter_update_s update;
+                orb_copy(ORB_ID(parameter_update), params_sub, &update);
+                /* if a param update occured, re-read our parameters */
+                parameters_update(&ph, &pp);
             }
+            //Only change controller if attitude changed
+            if (fds[1].revents & POLLIN) {
+                //Check what is new
+                bool pos_updated;
+                orb_check(global_pos_sub, &pos_updated);
+                bool att_sp_updated;
+                orb_check(att_sp_sub, &att_sp_updated);
+                bool manual_sp_updated;
+                orb_check(manual_sp_sub, &manual_sp_updated);
+                bool airspeed_updated;
+                orb_check(airspeed_sub, &airspeed_updated);
+
+                //Get local copy of attitude
+                orb_copy(ORB_ID(vehicle_attitude), att_sub, &att);
+
+                //Copier l'attitude sp si il est change
+                if (att_sp_updated) {
+                    orb_copy(ORB_ID(vehicle_attitude_setpoint), att_sp_sub, &att_sp);
+                }
+
+                //Copier le manual sp si il est change
+                if (manual_sp_updated){
+                    orb_copy(ORB_ID(manual_control_setpoint), manual_sp_sub, &manual_sp);
+                }
+
+                //Copier aispeed si changé
+                if (airspeed_updated){
+                    orb_copy(ORB_ID(airspeed), airspeed_sub, &airspd);
+                }
+
+                //Appeler la fonction qui controle les actuators
+                control_attitude(&pp, &manual_sp, &att, &actuators, &airspd);
+
+                //Get vehicule status
+                orb_copy(ORB_ID(vehicle_status), vstatus_sub, &vstatus);
+
+                //Sanity check then publish actuators outputs
+                if (PX4_ISFINITE(actuators.control[0]) &&
+                    PX4_ISFINITE(actuators.control[1]) &&
+                    PX4_ISFINITE(actuators.control[2]) &&
+                    PX4_ISFINITE(actuators.control[3])) {
+                        orb_publish(ORB_ID(actuator_controls_0), actuator_pub, &actuators);
+                }
+                    // J ai pas mis de verbose
+            }
+        }
 
     }
     warnx("Exiting, stopping all motors");
