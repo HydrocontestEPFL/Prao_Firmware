@@ -152,8 +152,8 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
 
 // Fonction de controle appelee dans le while
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
-        const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators, struct airspeed_s *airspd)
-{
+        const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators, struct airspeed_s *airspd) {
+
     //Les numeros de channel sont tires de actuator_controls.
 
     /* DEBUT MODIF Fab
@@ -193,11 +193,58 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
     //float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
     //actuators->control[1] = pitch_err * para->pitch_p;
 
+    // float airspeed_ctrl;
 
     if (para->mode > 0.5f && false) {
+        // get le airspeed sans aller à l'infini
+        /* if (airspd->true_airspeed_m_s < 1) {
+            airspeed_ctrl = 1.0f;
+        }
+        else {
+            airspeed_ctrl = airspd->true_airspeed_m_s;
+        }
+
+        //Controle du roll
+        //Faire le scaler
+        float roll_scaler = para->roll_scl / airspeed_ctrl;
+
+        // Terme proportionnel (peut etre un - a rajouter devant yaw_err)
+        float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
+        float roll_prop = roll_err * para->roll_p;
+
+        //Terme integrateur
+        float roll_int = math::constrain(roll_int + roll_err * para->roll_i, - para->int_max_roll, para->int_max_roll);
+
+        //Calcul du output final
+        float roll_output = (roll_int + roll_prop) * roll_scaler;
+        actuators->control[1]= roll_output;
+
+
+        //Controle du pitch
+        //Faire le scaler
+        float pitch_scaler = para->pitch_scl / airspeed_ctrl;
+
+        //Terme proportionnel
+        float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
+        float pitch_prop = pitch_err * para->pitch_p;
+
+        //Terme intégrateur ( integrator max pas encore defini )
+        float pitch_int = math::constrain(pitch_int + pitch_err * para->pitch_i, - para->int_max_pitch, para->int_max_pitch);
+
+        //Calcul du output final
+        float pitch_output = (pitch_int + pitch_prop) * pitch_scaler;
+        actuators->control[1]= pitch_output;
+
+
+        //le z et y sont tires de manual_control_setpoint.msg
+        //On controle le yaw avec la RC
+        actuators->control[2]=manual_sp->z;
+
+
+        //On controle le throttle avec la RC
+        actuators->control[3]=manual_sp->y; */
     }
     else {
-        PX4_INFO("Throttle %f\n", (double) manual_sp->z);
         //On controle le roll avec la RC
         actuators->control[0]=manual_sp->y;
 
