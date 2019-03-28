@@ -156,20 +156,49 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
     //Les numeros de channel sont tires de actuator_controls.
 
-    /* DEBUT MODIF Fab
+    // DEBUT MODIF Fab
     //get the usual dt estimate
-    uint64_t dt_micros = ecl_elapsed_time(&_last_run);
-    _last_run = ecl_absolute_time();
+
+
+    uint64_t _last_run;
+    float _integrator_max;
+    float _last_output;
+    float _integrator;
+    float constrain_airspeed(float airspeed, float minspeed, float maxspeed);
+
+           /* _last_run(0);
+            _integrator_max(0.0f);
+            _last_output(0.0f);
+            _integrator(0.0f);*/
+
+
+    uint64_t dt_micros = hrt_elapsed_time(&_last_run);
+    _last_run = hrt_absolute_time();
     float dt = (float)dt_micros * 1e-6f;
-    //lock integral for long intervals
-    bool lock_integrator = ctl_data.lock_integrator;
+
+
+    //lock integral for long intervals IL FAUT METTRE UN LOCK INTEGRATEUR PEUT ETRE
+  /* bool lock_integrator = ctl_data.lock_integrator;
     if (dt_micros > 500000) {
         lock_integrator = true;
-    }
-    //input conditioning
-    float airspeed = ctl_data.airspeed;
-    if (!lock_integrator && para->roll_i > 0.0f && airspeed > 0.5f * ctl_data.airspeed_min) {
-        float id = roll_error * dt;
+    }*/
+
+    float airspeed_ctrl;
+
+    if (para->mode > 0.5f && false) {
+        // get le airspeed sans aller à l'infini
+
+
+        //CONDITION TOUJOURS VRAI/FAUSSE
+       // if (airspd->true_airspeed_m_s < 1) {
+         //   airspeed_ctrl = 1.0f;
+        // }
+       // else {
+            airspeed_ctrl = airspd->true_airspeed_m_s;
+        // }
+   // if (!lock_integrator && para->roll_i > 0.0f && airspeed > 0.5f * ctl_data.airspeed_min) {
+        float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
+        float id = roll_err * dt;
 
     //anti-windup: do not allow integrator to increase if actuator is at limit
 
@@ -182,31 +211,25 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         }
          //add and constrain
         _integrator = math::constrain(_integrator + id * para->roll_i, -_integrator_max, _integrator_max);
-    }
+   // }
 
-    actuators->control[0] = (roll_err * para->roll_p + _integrator)* ctl_data.scaler *
-                            ctl_data.scaler;
-    //Fin modifs Fab */
+        //Faire le scaler
+        float roll_scaler = para->roll_scl / airspeed_ctrl;
+
+    actuators->control[0] = (roll_err * para->roll_p + _integrator)* roll_scaler*
+            roll_scaler;
+    //Fin modifs Fab
 
     // ANCIEN CONTROLE
     // On amène le pitch à 0 (peut etre un - a rajouter devant pitch_err)
     //float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
     //actuators->control[1] = pitch_err * para->pitch_p;
 
-    // float airspeed_ctrl;
 
-    if (para->mode > 0.5f && false) {
-        // get le airspeed sans aller à l'infini
-        /* if (airspd->true_airspeed_m_s < 1) {
-            airspeed_ctrl = 1.0f;
-        }
-        else {
-            airspeed_ctrl = airspd->true_airspeed_m_s;
-        }
 
+
+/*
         //Controle du roll
-        //Faire le scaler
-        float roll_scaler = para->roll_scl / airspeed_ctrl;
 
         // Terme proportionnel (peut etre un - a rajouter devant yaw_err)
         float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
