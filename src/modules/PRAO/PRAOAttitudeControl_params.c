@@ -140,3 +140,21 @@ PARAM_DEFINE_FLOAT(PRAO_R_SCALER,0.5f);
  * @group PRAO Attitude Control
  */
 PARAM_DEFINE_FLOAT(PRAO_MODE,0.0f);
+
+/**
+ * Roll time constant
+ *
+ * @min 0.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_R_TC,0.0f);
+
+/**
+ * Pitch time constant
+ *
+ * @min 0.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_P_TC,0.0f);
