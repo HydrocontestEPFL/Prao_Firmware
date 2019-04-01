@@ -167,13 +167,10 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
         // Borner la vitesse pour la mettre dans le scaler
         float speed_ctrl;
-        if (para->mode > 0.5f) {
-            // get le airspeed sans aller à l'infini
-            if (speed < 1) {
-                speed_ctrl = 1.0f;
-            } else {
-                speed_ctrl = speed;
-            }
+        if (speed < 1) {
+            speed_ctrl = 1.0f;
+        } else {
+            speed_ctrl = speed;
         }
 
         //Faire les scalers
@@ -184,13 +181,13 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
         // Trouver vitesse de roll
         float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-        float roll_spd_sp_nonsat = roll_err * para->roll_tc;
+        float roll_spd_sp_nonsat = roll_err * (1/ para->roll_tc);
 
         //Saturation de la vitesse de roll
         float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, - para->roll_spd_max, para->roll_spd_max);
 
         //Trouver error de roll speed
-        float roll_spd_err = rollspeed - roll_spd_sp;
+        float32_t roll_spd_err = att->rollspeed - roll_spd_sp;
 
         // Terme prop de roll speed
         float roll_spd_prop = roll_spd_err * para->roll_p;
@@ -202,19 +199,6 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         float roll_output = para->roll_scl * (roll_spd_prop + roll_spd_int);
 
         // Envoyer dans actuatoors ( les numeros de channel sont tires de actuator_controls )
-        actuators->control[0]= roll_output;
-
-
-
-        // Terme proportionnel (peut etre un - a rajouter devant yaw_err)
-        float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-        float roll_prop = roll_err * para->roll_p;
-
-        //Terme integrateur
-        float roll_int = math::constrain(roll_int + roll_err * para->roll_i, - para->int_max_roll, para->int_max_roll);
-
-        //Calcul du output final
-        float roll_output = (roll_int + roll_prop) * roll_scaler;
         actuators->control[0]= roll_output;
 
 
