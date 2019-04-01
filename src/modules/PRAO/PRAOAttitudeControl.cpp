@@ -107,7 +107,7 @@ int parameters_update(const struct param_handles *h, struct params *p);
  */
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
                       const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
-                      const struct vehicle_global_position_s *global_pos, uint64_t last_run);
+                      const struct vehicle_global_position_s *global_pos, uint64_t last_run, float roll_spd_int);
 
 //Definit certaines variables
 static bool thread_should_exit = false;		/**< Daemon exit flag */
@@ -155,13 +155,17 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
     param_get(h->mode, &(p->mode));
     param_get(h->roll_tc, &(p->roll_tc));
     param_get(h->pitch_tc, &(p->pitch_tc));
+    param_get(h->roll_int_max, &(p->roll_int_max));
+    param_get(h->pitch_int_max, &(p->pitch_int_max));
+    param_get(h->roll_spd_max, &(p->roll_spd_max));
+    param_get(h->pitch_spd_max, &(p->pitch_spd_max));
     return 0;
 }
 
 // Fonction de controle appelee dans le while
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
         const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
-                const struct vehicle_global_position_s *global_pos, uint64_t last_run) {
+                const struct vehicle_global_position_s *global_pos, uint64_t last_run, float roll_spd_int) {
 
     if (para->mode > 0.5f) {
         // Calcul de la vitesse
@@ -182,7 +186,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
         //Faire les scalers
         float roll_scaler = para->roll_scl / speed_ctrl;
-        float pitch_scaler = para->pitch_scl / speed_ctrl;
+        //float pitch_scaler = para->pitch_scl / speed_ctrl;
 
         // Controle du roll
 
@@ -194,16 +198,16 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, - para->roll_spd_max, para->roll_spd_max);
 
         //Trouver error de roll speed
-        float32_t roll_spd_err = att->rollspeed - roll_spd_sp;
+        float roll_spd_err = att->rollspeed - roll_spd_sp;
 
         // Terme prop de roll speed
         float roll_spd_prop = roll_spd_err * para->roll_p;
 
         // Terme int de roll speed
-        float roll_spd_int = math::constrain(roll_spd_int + roll_spd_err*dt*para->roll_i, - para->roll_int_max, para->roll_int_max);
+        roll_spd_int = math::constrain(roll_spd_int + roll_spd_err*dt*para->roll_i, - para->roll_int_max, para->roll_int_max);
 
         // Addition des termes
-        float roll_output = para->roll_scl * (roll_spd_prop + roll_spd_int);
+        float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
         // Envoyer dans actuatoors ( les numeros de channel sont tires de actuator_controls )
         actuators->control[0]= roll_output;
@@ -286,7 +290,6 @@ int PRAO_thread_main(int argc, char *argv[])
     //int local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));
     int vstatus_sub = orb_subscribe(ORB_ID(vehicle_status));
     //int vehicle_land_detected_sub = orb_subscribe(ORB_ID(vehicle_land_detected));
-    //int airspeed_sub = orb_subscribe(ORB_ID(airspeed));
 
     //Setup of loop
     struct pollfd fds[2];
@@ -298,6 +301,9 @@ int PRAO_thread_main(int argc, char *argv[])
     // Initialisation of parameters for dt
     uint64_t last_run;
     last_run = hrt_absolute_time();
+
+    // Initialisation du terme itégrateur;
+    float roll_spd_int = 0;
 
     while (!thread_should_exit) {
         //poll waits 500ms to make fds ready, 2 is number of arguments in fds
@@ -325,11 +331,14 @@ int PRAO_thread_main(int argc, char *argv[])
                 orb_check(att_sp_sub, &att_sp_updated);
                 bool manual_sp_updated;
                 orb_check(manual_sp_sub, &manual_sp_updated);
-                bool airspeed_updated;
-                orb_check(airspeed_sub, &airspeed_updated);
 
                 //Get local copy of attitude
                 orb_copy(ORB_ID(vehicle_attitude), att_sub, &att);
+
+                //Copier le pos si il est change
+                if (pos_updated) {
+                    orb_copy(ORB_ID(vehicle_global_position), global_pos_sub, &global_pos);
+                }
 
                 //Copier l'attitude sp si il est change
                 if (att_sp_updated) {
@@ -341,13 +350,8 @@ int PRAO_thread_main(int argc, char *argv[])
                     orb_copy(ORB_ID(manual_control_setpoint), manual_sp_sub, &manual_sp);
                 }
 
-                //Copier aispeed si changé
-                if (airspeed_updated){
-                    orb_copy(ORB_ID(airspeed), airspeed_sub, &airspd);
-                }
-
                 //Appeler la fonction qui controle les actuators
-                control_attitude(&pp, &manual_sp, &att, &actuators, &global_pos, last_run);
+                control_attitude(&pp, &manual_sp, &att, &actuators, &global_pos, last_run, roll_spd_int);
 
                 //Get vehicule status
                 orb_copy(ORB_ID(vehicle_status), vstatus_sub, &vstatus);
