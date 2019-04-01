@@ -158,3 +158,39 @@ PARAM_DEFINE_FLOAT(PRAO_R_TC,0.0f);
  * @group PRAO Attitude Control
  */
 PARAM_DEFINE_FLOAT(PRAO_P_TC,0.0f);
+
+/**
+ * Roll integrator max
+ *
+ * @min 0.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_R_INT_MAX,0.0f);
+
+/**
+ * Pitch integrator max
+ *
+ * @min 0.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_P_INT_MAX,0.0f);
+
+/**
+ * Roll speed max
+ *
+ * @min 0.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_R_SPD_MAX,0.0f);
+
+/**
+ * Pitch speed max
+ *
+ * @min 0.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_P_SPD_MAX,0.0f);

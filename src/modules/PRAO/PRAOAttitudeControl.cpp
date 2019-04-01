@@ -132,6 +132,10 @@ int parameters_init(struct _param_handles *h)
     h->mode    =   param_find("PRAO_MODE");
     h->roll_tc  =   param_find("PRAO_R_TC");
     h->pitch_tc  =   param_find("PRAO_P_TC");
+    h->roll_int_max  =   param_find("PRAO_R_INT_MAX");
+    h->pitch_int_max  =   param_find("PRAO_P_INT_MAX");
+    h->roll_spd_max  =   param_find("PRAO_R_INT_MAX");
+    h->pitch_spd_max  =   param_find("PRAO_P_SPD_MAX");
     return 0;
 }
 
