@@ -197,46 +197,6 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             speed_ctrl = speed;
         }
 
-<<<<<<< HEAD
-
-        //CONDITION TOUJOURS VRAI/FAUSSE
-        if (airspd->true_airspeed_m_s < 1) {
-            airspeed_ctrl = 1.0f;
-        }
-        else {
-            airspeed_ctrl = airspd->true_airspeed_m_s;
-        }
-        if (!lock_integrator && para->roll_i > 0.0f && airspeed > 0.5f * ctl_data.airspeed_min) {
-=======
-/*        if (!lock_integrator && para->roll_i > 0.0f && airspeed > 0.5f * ctl_data.airspeed_min) {
->>>>>>> 08dde3fb52a2e0e0026ca5334f9bb1dc9c7e4dc9
-            float roll_err = matrix::Eulerf(
-                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-            float id = roll_err * dt;
-        }
-    //anti-windup: do not allow integrator to increase if actuator is at limit
-
-<<<<<<< HEAD
-        if (_last_output < -1.0f) {
-=======
-       if (_last_output < -1.0f) {
->>>>>>> 08dde3fb52a2e0e0026ca5334f9bb1dc9c7e4dc9
-             //only allow motion to center: increase value
-            id = math::max(id, 0.0f);
-        }
-        else if (_last_output > 1.0f) {
-             //only allow motion to center: decrease value
-            id = math::min(id, 0.0f);
-        }
-
-        //add and constrain
-        _integrator = math::constrain(_integrator + id * para->roll_i, -_integrator_max, _integrator_max);
-<<<<<<< HEAD
-    }
-=======
-*/
->>>>>>> 08dde3fb52a2e0e0026ca5334f9bb1dc9c7e4dc9
-
         //Faire le scaler
         float roll_scaler = para->roll_scl / speed_ctrl;
         float pitch_scaler = para->pitch_scl / speed_ctrl;
