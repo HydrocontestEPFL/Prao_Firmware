@@ -107,7 +107,8 @@ int parameters_update(const struct param_handles *h, struct params *p);
  * Basic control function
  */
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
-        const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators, struct airspeed_s *airspd);
+                      const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
+                      struct vehicle_global_position *global_pos, uint64_t last_run);
 
 //Definit certaines variables
 static bool thread_should_exit = false;		/**< Daemon exit flag */
@@ -152,42 +153,51 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
 
 // Fonction de controle appelee dans le while
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
-        const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators, struct airspeed_s *airspd) {
+        const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
+                struct vehicle_global_position *global_pos, uint64_t last_run) {
 
     //Les numeros de channel sont tires de actuator_controls.
 
     // DEBUT MODIF Fab
     //get the usual dt estimate
 
+    // Calcul de la vitesse
+    float speed = sqrt((global_pos->vel_n)^2 + (global_pos->vel_e)^2);
 
-    uint64_t _last_run;
-    float _integrator_max;
+ /*   float _integrator_max;
     float _last_output;
     float _integrator;
     float constrain_airspeed(float airspeed, float minspeed, float maxspeed);
 
-           /* _last_run(0);
+            _last_run(0);
             _integrator_max(0.0f);
             _last_output(0.0f);
             _integrator(0.0f);*/
 
 
-    uint64_t dt_micros = hrt_elapsed_time(&_last_run);
-    _last_run = hrt_absolute_time();
+    uint64_t dt_micros = hrt_elapsed_time(&last_run);
+    last_run = hrt_absolute_time();
     float dt = (float)dt_micros * 1e-6f;
 
 
     //lock integral for long intervals IL FAUT METTRE UN LOCK INTEGRATEUR PEUT ETRE
-  /* bool lock_integrator = ctl_data.lock_integrator;
+    /*bool lock_integrator = ctl_data.lock_integrator;
     if (dt_micros > 500000) {
         lock_integrator = true;
     }*/
 
-    float airspeed_ctrl;
+    float speed_ctrl;
 
     if (para->mode > 0.5f) {
         // get le airspeed sans aller à l'infini
+        if (speed < 1) {
+            speed_ctrl = 1.0f;
+        }
+        else {
+            speed_ctrl = speed;
+        }
 
+<<<<<<< HEAD
 
         //CONDITION TOUJOURS VRAI/FAUSSE
         if (airspd->true_airspeed_m_s < 1) {
@@ -197,13 +207,20 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             airspeed_ctrl = airspd->true_airspeed_m_s;
         }
         if (!lock_integrator && para->roll_i > 0.0f && airspeed > 0.5f * ctl_data.airspeed_min) {
+=======
+/*        if (!lock_integrator && para->roll_i > 0.0f && airspeed > 0.5f * ctl_data.airspeed_min) {
+>>>>>>> 08dde3fb52a2e0e0026ca5334f9bb1dc9c7e4dc9
             float roll_err = matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
             float id = roll_err * dt;
         }
     //anti-windup: do not allow integrator to increase if actuator is at limit
 
+<<<<<<< HEAD
         if (_last_output < -1.0f) {
+=======
+       if (_last_output < -1.0f) {
+>>>>>>> 08dde3fb52a2e0e0026ca5334f9bb1dc9c7e4dc9
              //only allow motion to center: increase value
             id = math::max(id, 0.0f);
         }
@@ -211,15 +228,19 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
              //only allow motion to center: decrease value
             id = math::min(id, 0.0f);
         }
-         //add and constrain
+
+        //add and constrain
         _integrator = math::constrain(_integrator + id * para->roll_i, -_integrator_max, _integrator_max);
+<<<<<<< HEAD
     }
+=======
+*/
+>>>>>>> 08dde3fb52a2e0e0026ca5334f9bb1dc9c7e4dc9
 
         //Faire le scaler
-        float roll_scaler = para->roll_scl / airspeed_ctrl;
+        float roll_scaler = para->roll_scl / speed_ctrl;
+        float pitch_scaler = para->pitch_scl / speed_ctrl;
 
-    actuators->control[0] = (roll_err * para->roll_p + _integrator)* roll_scaler*
-            roll_scaler;
     //Fin modifs Fab
 
     // ANCIEN CONTROLE
@@ -228,10 +249,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
     //actuators->control[1] = pitch_err * para->pitch_p;
 
 
-
-
-/*
-        //Controle du roll
+        // Controle du roll
 
         // Terme proportionnel (peut etre un - a rajouter devant yaw_err)
         float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
@@ -242,11 +260,10 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
         //Calcul du output final
         float roll_output = (roll_int + roll_prop) * roll_scaler;
-        actuators->control[1]= roll_output;
+        actuators->control[0]= roll_output;
 
-        //Controle du pitch
-        //Faire le scaler
-        float pitch_scaler = para->pitch_scl / airspeed_ctrl;
+
+        // Controle du pitch
 
         //Terme proportionnel
         float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
@@ -264,9 +281,8 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         //On controle le yaw avec la RC
         actuators->control[2]=manual_sp->z;
 
-
         //On controle le throttle avec la RC
-        actuators->control[3]=manual_sp->y; */
+        actuators->control[3]=manual_sp->y;
     }
     else {
         //On controle le roll avec la RC
@@ -304,8 +320,8 @@ int PRAO_thread_main(int argc, char *argv[])
     memset(&vstatus, 0, sizeof(vstatus));
     struct position_setpoint_s global_sp;
     memset(&global_sp, 0, sizeof(global_sp));
-    struct airspeed_s airspd;
-    memset(&airspd, 0, sizeof(airspd));
+    //struct airspeed_s airspd;
+    //memset(&airspd, 0, sizeof(airspd));
 
     // Initialisation des output structures
     struct actuator_controls_s actuators;
@@ -336,7 +352,7 @@ int PRAO_thread_main(int argc, char *argv[])
     //int local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));
     int vstatus_sub = orb_subscribe(ORB_ID(vehicle_status));
     //int vehicle_land_detected_sub = orb_subscribe(ORB_ID(vehicle_land_detected));
-    int airspeed_sub = orb_subscribe(ORB_ID(airspeed));
+    //int airspeed_sub = orb_subscribe(ORB_ID(airspeed));
 
     //Setup of loop
     struct pollfd fds[2];
@@ -344,6 +360,10 @@ int PRAO_thread_main(int argc, char *argv[])
     fds[0].events = POLLIN;
     fds[1].fd = att_sub;
     fds[1].events = POLLIN;
+
+    // Initialisation of parameters for dt
+    uint64_t last_run;
+    last_run = hrt_absolute_time();
 
     while (!thread_should_exit) {
         //poll waits 500ms to make fds ready, 2 is number of arguments in fds
@@ -393,7 +413,7 @@ int PRAO_thread_main(int argc, char *argv[])
                 }
 
                 //Appeler la fonction qui controle les actuators
-                control_attitude(&pp, &manual_sp, &att, &actuators, &airspd);
+                control_attitude(&pp, &manual_sp, &att, &actuators, &global_pos, last_run);
 
                 //Get vehicule status
                 orb_copy(ORB_ID(vehicle_status), vstatus_sub, &vstatus);
