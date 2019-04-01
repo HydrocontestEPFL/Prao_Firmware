@@ -184,7 +184,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
         //Faire les scalers
         float roll_scaler = para->roll_scl / pow(speed_ctrl,2);
-        //float pitch_scaler = para->pitch_scl / pow(speed_ctrl,2);
+        float pitch_scaler = para->pitch_scl / pow(speed_ctrl,2);
 
         // Controle du roll
 
@@ -212,6 +212,29 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
 
         // Controle du pitch
+
+        // Trouver vitesse de pitch
+        float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta(); //att est le nom de la struct qui gere vehicule_attitude
+        float pitch_spd_sp_nonsat = - pitch_err * (1/ para->pitch_tc); // ya un moins du au feedback
+
+        //Saturation de la vitesse de roll
+        float pitch_spd_sp = math::constrain(pitch_spd_sp_nonsat, - para->pitch_spd_max, para->pitch_spd_max);
+
+        //Trouver error de roll speed
+        float pitch_spd_err = pitch_spd_sp - att->pitchspeed;
+
+        // Terme prop de roll speed
+        float pitch_spd_prop = pitch_spd_err * para->pitch_p;
+
+        // Terme int de roll speed
+        pitch_spd_int = math::constrain(pitch_spd_int + pitch_spd_err*dt*para->pitch_i, - para->pitch_int_max, para->pitch_int_max);
+
+        // Addition des termes
+        float pitch_output = pitch_scaler * (pitch_spd_prop + pitch_spd_int);
+
+        // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
+        actuators->control[1]= pitch_output;
+
 
         //le z et y sont tires de manual_control_setpoint.msg
         //On controle le yaw avec la RC
@@ -302,6 +325,7 @@ int PRAO_thread_main(int argc, char *argv[])
 
     // Initialisation du terme itégrateur;
     float roll_spd_int = 0;
+    float pitch_spd_int = 0;
 
     while (!thread_should_exit) {
         //poll waits 500ms to make fds ready, 2 is number of arguments in fds
