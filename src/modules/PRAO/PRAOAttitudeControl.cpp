@@ -131,6 +131,8 @@ int parameters_init(struct _param_handles *h)
     h->pitch_scl    =   param_find("PRAO_P_SCALER");
     h->roll_scl    =   param_find("PRAO_R_SCALER");
     h->mode    =   param_find("PRAO_MODE");
+    h->roll_tc  =   param_find("PRAO_R_TC");
+    h->pitch_tc  =   param_find("PRAO_P_TC");
     return 0;
 }
 
@@ -148,6 +150,8 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
     param_get(h->pitch_scl, &(p->pitch_scl));
     param_get(h->roll_scl, &(p->roll_scl));
     param_get(h->mode, &(p->mode));
+    param_get(h-roll_tc, &(p->roll_tc));
+    param_get(h->pitch_tc, &(p->pitch_tc));
     return 0;
 }
 
