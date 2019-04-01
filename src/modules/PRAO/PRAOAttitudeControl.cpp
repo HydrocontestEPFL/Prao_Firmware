@@ -156,58 +156,29 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
                 struct vehicle_global_position *global_pos, uint64_t last_run) {
 
-    //Les numeros de channel sont tires de actuator_controls.
-
-    // DEBUT MODIF Fab
-    //get the usual dt estimate
-
-    // Calcul de la vitesse
-    float speed = sqrt((global_pos->vel_n)^2 + (global_pos->vel_e)^2);
-
- /*   float _integrator_max;
-    float _last_output;
-    float _integrator;
-    float constrain_airspeed(float airspeed, float minspeed, float maxspeed);
-
-            _last_run(0);
-            _integrator_max(0.0f);
-            _last_output(0.0f);
-            _integrator(0.0f);*/
-
-
-    uint64_t dt_micros = hrt_elapsed_time(&last_run);
-    last_run = hrt_absolute_time();
-    float dt = (float)dt_micros * 1e-6f;
-
-
-    //lock integral for long intervals IL FAUT METTRE UN LOCK INTEGRATEUR PEUT ETRE
-    /*bool lock_integrator = ctl_data.lock_integrator;
-    if (dt_micros > 500000) {
-        lock_integrator = true;
-    }*/
-
-    float speed_ctrl;
-
     if (para->mode > 0.5f) {
-        // get le airspeed sans aller à l'infini
-        if (speed < 1) {
-            speed_ctrl = 1.0f;
-        }
-        else {
-            speed_ctrl = speed;
+        // Calcul de la vitesse
+        float speed = sqrt((global_pos->vel_n)^2 + (global_pos->vel_e)^2);
+
+        // Get le dt
+        uint64_t dt_micros = hrt_elapsed_time(&last_run);
+        last_run = hrt_absolute_time();
+        float dt = (float)dt_micros * 1e-6f;
+
+        // Borner la vitesse pour la mettre dans le scaler
+        float speed_ctrl;
+        if (para->mode > 0.5f) {
+            // get le airspeed sans aller à l'infini
+            if (speed < 1) {
+                speed_ctrl = 1.0f;
+            } else {
+                speed_ctrl = speed;
+            }
         }
 
-        //Faire le scaler
+        //Faire les scalers
         float roll_scaler = para->roll_scl / speed_ctrl;
         float pitch_scaler = para->pitch_scl / speed_ctrl;
-
-    //Fin modifs Fab
-
-    // ANCIEN CONTROLE
-    // On amène le pitch à 0 (peut etre un - a rajouter devant pitch_err)
-    //float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
-    //actuators->control[1] = pitch_err * para->pitch_p;
-
 
         // Controle du roll
 
@@ -229,6 +200,8 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
         // Addition des termes
         float roll_output = para->roll_scl * (roll_spd_prop + roll_spd_int);
+
+        // Envoyer dans actuatoors ( les numeros de channel sont tires de actuator_controls )
         actuators->control[0]= roll_output;
 
 
@@ -246,18 +219,6 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
 
         // Controle du pitch
-
-        //Terme proportionnel
-        float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta();
-        float pitch_prop = pitch_err * para->pitch_p;
-
-        //Terme intégrateur ( integrator max pas encore defini )
-        float pitch_int = math::constrain(pitch_int + pitch_err * para->pitch_i, - para->int_max_pitch, para->int_max_pitch);
-
-        //Calcul du output final
-        float pitch_output = (pitch_int + pitch_prop) * pitch_scaler;
-        actuators->control[1]= pitch_output;
-
 
         //le z et y sont tires de manual_control_setpoint.msg
         //On controle le yaw avec la RC
