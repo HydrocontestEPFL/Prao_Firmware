@@ -54,7 +54,6 @@
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_attitude_setpoint.h>
 #include <uORB/topics/vehicle_global_position.h>
-#include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/uORB.h>
@@ -108,7 +107,7 @@ int parameters_update(const struct param_handles *h, struct params *p);
  */
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
                       const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
-                      struct vehicle_global_position *global_pos, uint64_t last_run);
+                      const struct vehicle_global_position_s *global_pos, uint64_t last_run);
 
 //Definit certaines variables
 static bool thread_should_exit = false;		/**< Daemon exit flag */
@@ -150,7 +149,7 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
     param_get(h->pitch_scl, &(p->pitch_scl));
     param_get(h->roll_scl, &(p->roll_scl));
     param_get(h->mode, &(p->mode));
-    param_get(h-roll_tc, &(p->roll_tc));
+    param_get(h->roll_tc, &(p->roll_tc));
     param_get(h->pitch_tc, &(p->pitch_tc));
     return 0;
 }
@@ -158,11 +157,11 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
 // Fonction de controle appelee dans le while
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
         const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
-                struct vehicle_global_position *global_pos, uint64_t last_run) {
+                const struct vehicle_global_position_s *global_pos, uint64_t last_run) {
 
     if (para->mode > 0.5f) {
         // Calcul de la vitesse
-        float speed = sqrt((global_pos->vel_n)^2 + (global_pos->vel_e)^2);
+        float speed = sqrt(pow(global_pos->vel_n,2) + pow(global_pos->vel_e,2));
 
         // Get le dt
         uint64_t dt_micros = hrt_elapsed_time(&last_run);
