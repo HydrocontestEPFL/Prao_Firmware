@@ -125,8 +125,6 @@ int parameters_init(struct _param_handles *h)
     h->roll_i   =   param_find("PRAO_R_I");
     h->pitch_p  =   param_find("PRAO_P_P");
     h->pitch_i  =   param_find("PRAO_P_I");
-    h->int_max_pitch    =   param_find("PRAO_INT_MAX_P");
-    h->int_max_roll    =   param_find("PRAO_INT_MAX_R");
     h->pitch_scl    =   param_find("PRAO_P_SCALER");
     h->roll_scl    =   param_find("PRAO_R_SCALER");
     h->mode    =   param_find("PRAO_MODE");
@@ -134,7 +132,7 @@ int parameters_init(struct _param_handles *h)
     h->pitch_tc  =   param_find("PRAO_P_TC");
     h->roll_int_max  =   param_find("PRAO_R_INT_MAX");
     h->pitch_int_max  =   param_find("PRAO_P_INT_MAX");
-    h->roll_spd_max  =   param_find("PRAO_R_INT_MAX");
+    h->roll_spd_max  =   param_find("PRAO_R_SPD_MAX");
     h->pitch_spd_max  =   param_find("PRAO_P_SPD_MAX");
     return 0;
 }
@@ -185,20 +183,20 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         }
 
         //Faire les scalers
-        float roll_scaler = para->roll_scl / speed_ctrl;
-        //float pitch_scaler = para->pitch_scl / speed_ctrl;
+        float roll_scaler = para->roll_scl / pow(speed_ctrl,2);
+        //float pitch_scaler = para->pitch_scl / pow(speed_ctrl,2);
 
         // Controle du roll
 
         // Trouver vitesse de roll
         float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-        float roll_spd_sp_nonsat = roll_err * (1/ para->roll_tc);
+        float roll_spd_sp_nonsat = - roll_err * (1/ para->roll_tc); // ya un moins du au feedback
 
         //Saturation de la vitesse de roll
         float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, - para->roll_spd_max, para->roll_spd_max);
 
         //Trouver error de roll speed
-        float roll_spd_err = att->rollspeed - roll_spd_sp;
+        float roll_spd_err = roll_spd_sp - att->rollspeed;
 
         // Terme prop de roll speed
         float roll_spd_prop = roll_spd_err * para->roll_p;
@@ -217,10 +215,10 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
         //le z et y sont tires de manual_control_setpoint.msg
         //On controle le yaw avec la RC
-        actuators->control[2]=manual_sp->z;
+        actuators->control[2]=manual_sp->r;
 
         //On controle le throttle avec la RC
-        actuators->control[3]=manual_sp->y;
+        actuators->control[3]=manual_sp->z;
     }
     else {
         //On controle le roll avec la RC

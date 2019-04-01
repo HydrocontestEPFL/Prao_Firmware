@@ -97,24 +97,6 @@ PARAM_DEFINE_FLOAT(PRAO_Y_P,0.5f);
 PARAM_DEFINE_FLOAT(PRAO_Y_I,0.5f);
 
 /**
- * Limit of integrator on pitch
- *
- * @min 0.0
- * @max 100.0
- * @group PRAO Attitude Control
- */
-PARAM_DEFINE_FLOAT(PRAO_INT_MAX_P,0.5f);
-
-/**
- * Limit of integrator on roll
- *
- * @min 0.0
- * @max 100.0
- * @group PRAO Attitude Control
- */
-PARAM_DEFINE_FLOAT(PRAO_INT_MAX_R,0.5f);
-
-/**
  * Pitch scaler
  *
  * @min 0.0
