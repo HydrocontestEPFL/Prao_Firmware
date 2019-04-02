@@ -130,7 +130,7 @@ PARAM_DEFINE_FLOAT(PRAO_MODE,0.0f);
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_R_TC,0.0f);
+PARAM_DEFINE_FLOAT(PRAO_R_TC,1.0f);
 
 /**
  * Pitch time constant
@@ -139,7 +139,7 @@ PARAM_DEFINE_FLOAT(PRAO_R_TC,0.0f);
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_P_TC,0.0f);
+PARAM_DEFINE_FLOAT(PRAO_P_TC,1.0f);
 
 /**
  * Roll integrator max
@@ -148,7 +148,7 @@ PARAM_DEFINE_FLOAT(PRAO_P_TC,0.0f);
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_R_INT_MAX,0.0f);
+PARAM_DEFINE_FLOAT(PRAO_R_INT_MAX,10.0f);
 
 /**
  * Pitch integrator max
@@ -157,7 +157,7 @@ PARAM_DEFINE_FLOAT(PRAO_R_INT_MAX,0.0f);
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_P_INT_MAX,0.0f);
+PARAM_DEFINE_FLOAT(PRAO_P_INT_MAX,10.0f);
 
 /**
  * Roll speed max
@@ -166,7 +166,7 @@ PARAM_DEFINE_FLOAT(PRAO_P_INT_MAX,0.0f);
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_R_SPD_MAX,0.0f);
+PARAM_DEFINE_FLOAT(PRAO_R_SPD_MAX,10.0f);
 
 /**
  * Pitch speed max
@@ -175,4 +175,4 @@ PARAM_DEFINE_FLOAT(PRAO_R_SPD_MAX,0.0f);
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_P_SPD_MAX,0.0f);
+PARAM_DEFINE_FLOAT(PRAO_P_SPD_MAX,10.0f);

@@ -107,7 +107,8 @@ int parameters_update(const struct param_handles *h, struct params *p);
  */
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
                       const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
-                      const struct vehicle_global_position_s *global_pos, uint64_t last_run, float roll_spd_int);
+                      const struct vehicle_global_position_s *global_pos, uint64_t last_run,
+                              float roll_spd_int, float pitch_spd_int);
 
 //Definit certaines variables
 static bool thread_should_exit = false;		/**< Daemon exit flag */
@@ -163,7 +164,8 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
 // Fonction de controle appelee dans le while
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
         const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
-                const struct vehicle_global_position_s *global_pos, uint64_t last_run, float roll_spd_int) {
+                const struct vehicle_global_position_s *global_pos, uint64_t last_run,
+                        float roll_spd_int, float pitch_spd_int) {
 
     if (para->mode > 0.5f) {
         // Calcul de la vitesse
@@ -183,8 +185,8 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         }
 
         //Faire les scalers
-        float roll_scaler = para->roll_scl / pow(speed_ctrl,2);
-        float pitch_scaler = para->pitch_scl / pow(speed_ctrl,2);
+        float roll_scaler = para->roll_scl / powf(speed_ctrl,2);
+        float pitch_scaler = para->pitch_scl / powf(speed_ctrl,2);
 
         // Controle du roll
 
@@ -373,7 +375,8 @@ int PRAO_thread_main(int argc, char *argv[])
                 }
 
                 //Appeler la fonction qui controle les actuators
-                control_attitude(&pp, &manual_sp, &att, &actuators, &global_pos, last_run, roll_spd_int);
+                control_attitude(&pp, &manual_sp, &att, &actuators, &global_pos, last_run,
+                        roll_spd_int, pitch_spd_int);
 
                 //Get vehicule status
                 orb_copy(ORB_ID(vehicle_status), vstatus_sub, &vstatus);
