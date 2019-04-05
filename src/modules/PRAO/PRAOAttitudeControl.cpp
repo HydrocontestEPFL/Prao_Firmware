@@ -219,16 +219,19 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta(); //att est le nom de la struct qui gere vehicule_attitude
         float pitch_spd_sp_nonsat = - pitch_err * (1/ para->pitch_tc); // ya un moins du au feedback
 
-        //Saturation de la vitesse de roll
+        //Saturation de la consigne de vitesse de pitch
         float pitch_spd_sp = math::constrain(pitch_spd_sp_nonsat, - para->pitch_spd_max, para->pitch_spd_max);
 
-        //Trouver error de roll speed
-        float pitch_spd_err = pitch_spd_sp - att->pitchspeed;
+        //Saturation de la vitesse de pitch (filtrage des vibrations)
+        float pitch_spd = math::constrain(att->pitchspeed, - para->pitch_spd_max, para->pitch_spd_max);
 
-        // Terme prop de roll speed
+        //Trouver error de pitch speed
+        float pitch_spd_err = pitch_spd_sp - pitch_spd;
+
+        // Terme prop de pitch speed
         float pitch_spd_prop = pitch_spd_err * para->pitch_p;
 
-        // Terme int de roll speed
+        // Terme int de pitch speed
         pitch_spd_int = math::constrain(pitch_spd_int + pitch_spd_err*dt*para->pitch_i, - para->pitch_int_max, para->pitch_int_max);
 
         // Addition des termes
