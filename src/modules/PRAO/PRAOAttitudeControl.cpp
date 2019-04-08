@@ -290,14 +290,14 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
         // Trouver vitesse de roll
         float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-        roll_err_filtree = (para->k_filtre*dt*roll_err + roll_err_filtree)/(para->a_filtre*dt + 1.0f);
+        roll_err_filtree = (para->k_filter*dt*roll_err + roll_err_filtree)/(para->a_filter*dt + 1.0f);
         float roll_spd_sp_nonsat = - roll_err_filtree * (1/ para->roll_tc); // ya un moins du au feedback
 
         //Saturation de la vitesse de roll
         float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, - para->roll_spd_max, para->roll_spd_max);
 
         //Trouver error de roll speed
-        roll_spd_filtree = (para->k_filtre*dt*att->rollspeed + roll_spd_filtree)/(para->a_filtre*dt + 1.0f);
+        roll_spd_filtree = (para->k_filter*dt*att->rollspeed + roll_spd_filtree)/(para->a_filter*dt + 1.0f);
         float roll_spd_err = roll_spd_sp - roll_spd_filtree;
 
         // Terme prop de roll speed
