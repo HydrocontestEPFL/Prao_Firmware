@@ -176,3 +176,21 @@ PARAM_DEFINE_FLOAT(PRAO_R_SPD_MAX,10.0f);
  * @group PRAO Attitude Control
  */
 PARAM_DEFINE_FLOAT(PRAO_P_SPD_MAX,10.0f);
+
+/**
+ * K filtre
+ *
+ * @min 0.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_K_FILTER,10.0f);
+
+/**
+ * A filtre
+ *
+ * @min 0.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_A_FILTER,10.0f);
