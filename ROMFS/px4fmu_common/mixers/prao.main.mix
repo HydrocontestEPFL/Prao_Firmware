@@ -27,7 +27,7 @@ The mixer is configure as a pass throught.
 
 M: 1
 O:      10000  10000      0 -10000  10000
-S: 0 2  10000  10000      0 -3000  3000
+S: 0 2  10000  10000      0 -10000  10000
 
 Main foil mixer
 -------------
@@ -36,8 +36,8 @@ Two scalers total (output, pitch).
 The mixer is configure as a pass through.
 
 M: 1
-O:      10000  10000      0 -3000  3000
-S: 0 1  10000  10000      0 -3000  3000
+O:      10000  10000      0 -10000  10000
+S: 0 1  10000  10000      0 -10000  10000
 
 Small foil mixer
 -------------
@@ -46,5 +46,5 @@ Two scalers total (output, roll).
 The mixer is configure as a pass through.
 
 M: 1
-O:      10000  10000      0 -3000  3000
+O:      10000  10000      0 -10000  10000
 S: 0 0  10000  10000      0 -10000  10000
