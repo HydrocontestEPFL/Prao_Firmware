@@ -194,3 +194,12 @@ PARAM_DEFINE_FLOAT(PRAO_K_FILTER,10.0f);
  * @group PRAO Attitude Control
  */
 PARAM_DEFINE_FLOAT(PRAO_A_FILTER,10.0f);
+
+/**
+ * Alpha filter
+ *
+ * @min 0.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_ALPHA_FILT,10.0f);

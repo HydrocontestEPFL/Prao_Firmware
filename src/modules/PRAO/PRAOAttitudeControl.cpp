@@ -137,6 +137,7 @@ int parameters_init(struct _param_handles *h)
     h->pitch_spd_max  =   param_find("PRAO_P_SPD_MAX");
     h->k_filter  =  param_find("PRAO_K_FILTER");
     h->a_filter  =  param_find("PRAO_A_FILTER");
+    h->alpha_filter  = param_find("PRAO_ALPHA_FILT");
     return 0;
 }
 
@@ -162,6 +163,7 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
     param_get(h->pitch_spd_max, &(p->pitch_spd_max));
     param_get(h->k_filter, &(p->k_filter));
     param_get(h->a_filter, &(p->a_filter));
+    param_get(h->alpha_filter, &(p->alpha_filter))
     return 0;
 }
 
@@ -265,7 +267,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         //On controle le throttle avec la RC
         actuators->control[3]=manual_sp->z;
     }
-    else {
+    else if (para->mode > 2.5f && para->mode < 3.5f) {
         // Calcul de la vitesse
         float speed = sqrt(pow(global_pos->vel_n,2) + pow(global_pos->vel_e,2));
 
@@ -298,6 +300,89 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
         //Trouver error de roll speed
         roll_spd_filtree = (para->k_filter*dt*att->rollspeed + roll_spd_filtree)/(para->a_filter*dt + 1.0f);
+        float roll_spd_err = roll_spd_sp - roll_spd_filtree;
+
+        // Terme prop de roll speed
+        float roll_spd_prop = roll_spd_err * para->roll_p;
+
+        // Terme int de roll speed
+        roll_spd_int = math::constrain(roll_spd_int + roll_spd_err*dt*para->roll_i, - para->roll_int_max, para->roll_int_max);
+
+        // Addition des termes
+        float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
+
+        // Envoyer dans actuatoors ( les numeros de channel sont tires de actuator_controls )
+        actuators->control[0]= roll_output;
+
+
+        // Controle du pitch
+
+        // Trouver vitesse de pitch
+        float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta(); //att est le nom de la struct qui gere vehicule_attitude
+        float pitch_spd_sp_nonsat = - pitch_err * (1/ para->pitch_tc); // ya un moins du au feedback
+
+        //Saturation de la consigne de vitesse de pitch
+        float pitch_spd_sp = math::constrain(pitch_spd_sp_nonsat, - para->pitch_spd_max, para->pitch_spd_max);
+
+        //Saturation de la vitesse de pitch (filtrage des vibrations)
+        float pitch_spd = math::constrain(att->pitchspeed, - para->pitch_spd_max, para->pitch_spd_max);
+
+        //Trouver error de pitch speed
+        float pitch_spd_err = pitch_spd_sp - pitch_spd;
+
+        // Terme prop de pitch speed
+        float pitch_spd_prop = pitch_spd_err * para->pitch_p;
+
+        // Terme int de pitch speed
+        pitch_spd_int = math::constrain(pitch_spd_int + pitch_spd_err*dt*para->pitch_i, - para->pitch_int_max, para->pitch_int_max);
+
+        // Addition des termes
+        float pitch_output = pitch_scaler * (pitch_spd_prop + pitch_spd_int);
+
+        // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
+        actuators->control[1]= pitch_output;
+
+
+        //le z et y sont tires de manual_control_setpoint.msg
+        //On controle le yaw avec la RC
+        actuators->control[2]=manual_sp->r;
+
+        //On controle le throttle avec la RC
+        actuators->control[3]=manual_sp->z;
+    }
+    else {
+        // Calcul de la vitesse
+        float speed = sqrt(pow(global_pos->vel_n,2) + pow(global_pos->vel_e,2));
+
+        // Get le dt
+        uint64_t dt_micros = hrt_elapsed_time(&last_run);
+        last_run = hrt_absolute_time();
+        float dt = (float)dt_micros * 1e-6f;
+
+        // Borner la vitesse pour la mettre dans le scaler
+        float speed_ctrl;
+        if (speed < 1) {
+            speed_ctrl = 1.0f;
+        } else {
+            speed_ctrl = speed;
+        }
+
+        //Faire les scalers
+        float roll_scaler = para->roll_scl / powf(speed_ctrl,2);
+        float pitch_scaler = para->pitch_scl / powf(speed_ctrl,2);
+
+        // Controle du roll
+
+        // Trouver vitesse de roll
+        float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
+        roll_err_filtree = para->alpha_filter*roll_err + (1.0f - para->alpha_filter)*roll_err_filtree;
+        float roll_spd_sp_nonsat = - roll_err_filtree * (1/ para->roll_tc); // ya un moins du au feedback
+
+        //Saturation de la vitesse de roll
+        float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, - para->roll_spd_max, para->roll_spd_max);
+
+        //Trouver error de roll speed
+        roll_spd_filtree = para->alpha_filter*att->rollspeed + (1.0f - para->alpha_filter)*roll_spd_filtree;
         float roll_spd_err = roll_spd_sp - roll_spd_filtree;
 
         // Terme prop de roll speed

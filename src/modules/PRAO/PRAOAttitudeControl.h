@@ -88,6 +88,7 @@ struct _params {
     float pitch_int_max;
     float k_filter;
     float a_filter;
+    float alpha_filter;
 };
 
 //Initialise la structure des handles de param
@@ -111,6 +112,7 @@ struct _param_handles {
     param_t pitch_int_max;
     param_t k_filter;
     param_t a_filter;
+    param_t alpha_filter;
 };
 
 // MODIFIE LE HEADER FAB
