@@ -163,7 +163,7 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
     param_get(h->pitch_spd_max, &(p->pitch_spd_max));
     param_get(h->k_filter, &(p->k_filter));
     param_get(h->a_filter, &(p->a_filter));
-    param_get(h->alpha_filter, &(p->alpha_filter))
+    param_get(h->alpha_filter, &(p->alpha_filter));
     return 0;
 }
 
