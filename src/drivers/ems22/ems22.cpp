@@ -38,7 +38,11 @@
  * Driver for the ems22 encoder via an arduino nano, the connection is via I2C.
  */
 
+#include <px4_defines.h>
+#include <px4_getopt.h>
 #include <px4_config.h>
+#include <px4_workqueue.h>
+
 
 #include <drivers/device/i2c.h>
 
@@ -54,12 +58,14 @@
 #include <stdio.h>
 #include <math.h>
 #include <unistd.h>
+#include <termios.h>
+
 
 #include <nuttx/arch.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/clock.h>
 
-#include <systemlib/perf_counter.h>
+#include <perf/perf_counter.h>
 #include <systemlib/err.h>
 
 #include <mathlib/mathlib.h>
@@ -72,7 +78,7 @@
 #include <uORB/topics/subsystem_info.h>
 #include <uORB/topics/distance_sensor.h>
 
-#include <systemlib/param/param.h>
+#include <parameters/param.h>
 
 #include <board_config.h>
 
@@ -100,6 +106,9 @@ PARAM_DEFINE_INT32(DRV_ENC_OFFSET, 0);
 
 #define EMS22_CONVERSION_INTERVAL 10000 /* 5ms */
 
+/* Enable if you want a rolling average filter for the waves */
+//#define ROLLING_AVERAGE_FILTER
+
 /* oddly, ERROR is not defined for c++ */
 #ifdef ERROR
 # undef ERROR
@@ -117,7 +126,7 @@ public:
     virtual ssize_t		read(struct file *filp, char *buffer, size_t buflen);
     virtual int			ioctl(struct file *filp, int cmd, unsigned long arg);
 
-    uint16_t			get_angle_over_1024();
+    uint16_t			get_angle();
 
     /**
     * Diagnostics - print some basic information about the driver.
@@ -130,8 +139,8 @@ protected:
 private:
     float				_min_distance;
     float				_max_distance;
-    uint16_t 			_angle_over_1024;
-    uint16_t			_offset_over_1024;
+    uint16_t 			_angle;
+    uint16_t			_offset;
     work_s				_work;
     ringbuffer::RingBuffer		*_reports;
     bool				_sensor_ok;
@@ -255,6 +264,7 @@ EMS22::init()
 
     /* do I2C init (and probe) first */
     if (I2C::init() != OK) {
+        DEVICE_LOG("fck");
         goto out;
     }
 
@@ -295,8 +305,9 @@ EMS22::probe()
 
     const uint8_t cmd = EMS22_WHO_AM_I_REG;
 
+
     // set the I2C bus address
-    set_address(EMS22_BASEADDR);
+    set_device_address(EMS22_BASEADDR);
 
     // can't use a single transfer as nano need a bit of time for internal processing
     if (transfer(&cmd, 1, nullptr, 0) == OK) {
@@ -338,9 +349,9 @@ EMS22::get_maximum_distance()
 }
 
 uint16_t
-EMS22::get_angle_over_1024()
+EMS22::get_angle()
 {
-    return _angle_over_1024;
+    return _angle;
 }
 
 int
@@ -352,20 +363,20 @@ EMS22::ioctl(struct file *filp, int cmd, unsigned long arg)
             switch (arg) {
 
                 /* switching to manual polling */
-                case SENSOR_POLLRATE_MANUAL:
+                /* case SENSOR_POLLRATE_MANUAL:
                     stop();
                     _measure_ticks = 0;
-                    return OK;
+                    return OK;*/
 
                     /* external signalling (DRDY) not supported */
-                case SENSOR_POLLRATE_EXTERNAL:
+                //case SENSOR_POLLRATE_EXTERNAL:
 
                     /* zero would be bad */
                 case 0:
                     return -EINVAL;
 
                     /* set default/max polling rate */
-                case SENSOR_POLLRATE_MAX:
+               // case SENSOR_POLLRATE_MAX:
                 case SENSOR_POLLRATE_DEFAULT: {
                     /* do we need to start internal polling? */
                     bool want_start = (_measure_ticks == 0);
@@ -407,16 +418,16 @@ EMS22::ioctl(struct file *filp, int cmd, unsigned long arg)
             }
         }
 
-        case SENSORIOCGPOLLRATE:
+        /* case SENSORIOCGPOLLRATE:
             if (_measure_ticks == 0) {
                 return SENSOR_POLLRATE_MANUAL;
             }
 
-            return (1000 / _measure_ticks);
+            return (1000 / _measure_ticks);*/
 
-        case SENSORIOCSQUEUEDEPTH: {
+        //case SENSORIOCSQUEUEDEPTH: {
             /* lower bound is mandatory, upper bound is a sanity check */
-            if ((arg < 1) || (arg > 100)) {
+            /*if ((arg < 1) || (arg > 100)) {
                 return -EINVAL;
             }
 
@@ -430,26 +441,26 @@ EMS22::ioctl(struct file *filp, int cmd, unsigned long arg)
             irqrestore(flags);
 
             return OK;
-        }
+        }*/
 
-        case SENSORIOCGQUEUEDEPTH:
-            return _reports->size();
+        /*case SENSORIOCGQUEUEDEPTH:
+            return _reports->size();*/
 
         case SENSORIOCRESET:
             /* XXX implement this */
             return -EINVAL;
 
-        case RANGEFINDERIOCSETMINIUMDISTANCE: {
+        /*case RANGEFINDERIOCSETMINIUMDISTANCE: {
             set_minimum_distance(*(float *)arg);
             return 0;
-        }
+        } */
             break;
 
-        case RANGEFINDERIOCSETMAXIUMDISTANCE: {
+        /*case RANGEFINDERIOCSETMAXIUMDISTANCE: {
             set_maximum_distance(*(float *)arg);
             return 0;
         }
-            break;
+            break;*/
 
         default:
             /* give it to the superclass */
@@ -558,10 +569,13 @@ EMS22::collect()
         return ret;
     }
 
-    param_get(param_find("DRV_ENC_OFFSET"), &_offset_over_1024);
+    param_get(param_find("DRV_ENC_OFFSET"), &_offset);
 
-    _angle_over_1024 = 1024 - ((val[1] << 8) | val[0]) + 349;
-    float distance_m = cosf(math::radians(float(_angle_over_1024) / 1024.f * 360.f)) * 0.58f;
+    _angle = -((val[1] << 8) | val[0]) + _offset;
+
+    float angle_deg = _angle * 360.f / 1024.f;
+    const float rod_length = 0.71f; /* meter */
+    float distance_m = cosf(math::radians(angle_deg)) * rod_length;
 
     static float distance_buf[10];
     static int index = 0;
@@ -579,11 +593,17 @@ EMS22::collect()
     /* there is no enum item for a combined LASER and ULTRASOUND which it should be */
     report.type = distance_sensor_s::MAV_DISTANCE_SENSOR_MECHANICAL;
     report.orientation = 8;
+
+#ifdef ROLLING_AVERAGE_FILTER
     report.current_distance = distance_average;
-    report.raw_distance = distance_m;
+	report.raw_distance = distance_m;
+#else
+    report.current_distance = distance_m;
+#endif
+
     report.min_distance = get_minimum_distance();
     report.max_distance = get_maximum_distance();
-    report.covariance = 0.0f;
+    report.variance = 0.0f;
     /* TODO: set proper ID */
     report.id = 0;
 
@@ -624,7 +644,7 @@ EMS22::start()
     info.present = true;
     info.enabled = true;
     info.ok = true;
-    info.subsystem_type = subsystem_info_s::SUBSYSTEM_TYPE_RANGEFINDER;
+   // info.subsystem_type = subsystem_info_s::SUBSYSTEM_TYPE_RANGEFINDER;
 
     static orb_advert_t pub = nullptr;
 
@@ -746,10 +766,12 @@ namespace ems22
 
 
         if (g_dev == nullptr) {
+            errx(1, "did not create class");
             goto fail;
         }
 
         if (OK != g_dev->init()) {
+            errx(1, "init failed");
             goto fail;
         }
 
@@ -757,6 +779,7 @@ namespace ems22
         fd = open(EMS22_DEVICE_PATH, O_RDONLY);
 
         if (fd < 0) {
+            errx(1, "open failed");
             goto fail;
         }
 
@@ -848,6 +871,8 @@ namespace ems22
 
             warnx("periodic read %u", i);
             warnx("measurement: %0.3f", (double)report.current_distance);
+            warnx("minimum distance: %0.3f", (double)report.min_distance);
+            warnx("maximum distance: %0.3f", (double)report.max_distance);
             warnx("time:        %llu", report.timestamp);
         }
 
@@ -919,7 +944,7 @@ namespace ems22
 
         warnx("single read");
         warnx("measurement: %0.2f m", (double)report.current_distance);
-        warnx("raw angle: %d ", g_dev->get_angle_over_1024());
+        warnx("raw angle: %d ", g_dev->get_angle());
         warnx("time:        %llu", report.timestamp);
     }
 
