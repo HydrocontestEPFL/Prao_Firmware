@@ -108,7 +108,7 @@ int parameters_update(const struct param_handles *h, struct params *p);
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
                       const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
                       const struct vehicle_global_position_s *global_pos, uint64_t last_run,
-                              float roll_spd_int, float pitch_spd_int, float roll_spd_filtree, float pitch_spd_filtree);
+                              float roll_spd_int, float pitch_spd_int, float roll_spd_filtree, float pitch_spd_filtree, const struct distance_sensor_s *dist_sensor);
 
 //Definit certaines variables
 static bool thread_should_exit = false;		/**< Daemon exit flag */
@@ -171,11 +171,11 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
         const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
                 const struct vehicle_global_position_s *global_pos, uint64_t last_run,
-                        float roll_spd_int, float pitch_spd_int, float roll_spd_filtree, float pitch_spd_filtree) {
+                        float roll_spd_int, float pitch_spd_int, float roll_spd_filtree, float pitch_spd_filtree, const  distance_sensor_s *dist_sensor) {
 
     if (para->mode > -0.5f && para->mode < 0.5f) {
         //On controle le roll avec la RC
-        actuators->control[0] = manual_sp->y;
+        actuators->control[0] = dist_sensor->distance_m;
 
         //On controle le pitch avec la RC
         actuators->control[1] = manual_sp->x;
@@ -541,6 +541,8 @@ int PRAO_thread_main(int argc, char *argv[])
     memset(&vstatus, 0, sizeof(vstatus));
     struct position_setpoint_s global_sp;
     memset(&global_sp, 0, sizeof(global_sp));
+    struct distance_sensor_s dist_sensor;
+    memset (&dist_sensor, 0, sizeof(dist_sensor));
     //struct airspeed_s airspd;
     //memset(&airspd, 0, sizeof(airspd));
 
@@ -573,6 +575,7 @@ int PRAO_thread_main(int argc, char *argv[])
     //int local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));
     int vstatus_sub = orb_subscribe(ORB_ID(vehicle_status));
     //int vehicle_land_detected_sub = orb_subscribe(ORB_ID(vehicle_land_detected));
+    int dist_sensor_sub = orb_subscribe(ORB_IB(distance_sensor));
 
     //Setup of loop
     struct pollfd fds[2];
@@ -617,6 +620,8 @@ int PRAO_thread_main(int argc, char *argv[])
                 orb_check(att_sp_sub, &att_sp_updated);
                 bool manual_sp_updated;
                 orb_check(manual_sp_sub, &manual_sp_updated);
+                bool dist_sensor_updated;
+                orn_check(dist_sensor_sub; &dist_sensor_updated);
 
                 //Get local copy of attitude
                 orb_copy(ORB_ID(vehicle_attitude), att_sub, &att);
@@ -636,9 +641,14 @@ int PRAO_thread_main(int argc, char *argv[])
                     orb_copy(ORB_ID(manual_control_setpoint), manual_sp_sub, &manual_sp);
                 }
 
+                //Copier le distance sensor si il est changé
+                if (dist_sensor_updated) {
+                    orb_copy(ORB_ID(distance_sensor),dist_sensor_sub, &dist_sensor);
+                }
+
                 //Appeler la fonction qui controle les actuators
                 control_attitude(&pp, &manual_sp, &att, &actuators, &global_pos, last_run,
-                        roll_spd_int, pitch_spd_int, roll_spd_filtree, pitch_spd_filtree);
+                        roll_spd_int, pitch_spd_int, roll_spd_filtree, pitch_spd_filtree, &dist_sensor);
 
                 //Get vehicule status
                 orb_copy(ORB_ID(vehicle_status), vstatus_sub, &vstatus);
