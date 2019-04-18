@@ -108,7 +108,7 @@ int parameters_update(const struct param_handles *h, struct params *p);
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
                       const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
                       const struct vehicle_global_position_s *global_pos, uint64_t last_run,
-                              float roll_spd_int, float pitch_spd_int, float pitch_spd_filtree, float roll_spd_filtree);
+                              float roll_spd_int, float pitch_spd_int, float roll_spd_filtree, float pitch_spd_filtree);
 
 //Definit certaines variables
 static bool thread_should_exit = false;		/**< Daemon exit flag */
@@ -171,7 +171,7 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
         const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
                 const struct vehicle_global_position_s *global_pos, uint64_t last_run,
-                        float roll_spd_int, float pitch_spd_int, float pitch_spd_filtree, float roll_spd_filtree) {
+                        float roll_spd_int, float pitch_spd_int, float roll_spd_filtree, float pitch_spd_filtree) {
 
     if (para->mode > -0.5f && para->mode < 0.5f) {
         //On controle le roll avec la RC
@@ -453,7 +453,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
         // Trouver vitesse de roll
         float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-        float roll_spd_sp_nonsat = - roll_err_filtree * (1/ para->roll_tc); // ya un moins du au feedback
+        float roll_spd_sp_nonsat = - roll_err * (1/ para->roll_tc); // ya un moins du au feedback
 
         //Saturation de la consigne de vitesse de roll
         float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, - para->roll_spd_max, para->roll_spd_max);
@@ -588,8 +588,8 @@ int PRAO_thread_main(int argc, char *argv[])
     // Initialisation de termes reutilises
     float roll_spd_int = 0;
     float pitch_spd_int = 0;
-    float pitch_spd_filtree = 0;
     float roll_spd_filtree = 0;
+    float pitch_spd_filtree = 0;
 
     while (!thread_should_exit) {
         //poll waits 500ms to make fds ready, 2 is number of arguments in fds
@@ -638,7 +638,7 @@ int PRAO_thread_main(int argc, char *argv[])
 
                 //Appeler la fonction qui controle les actuators
                 control_attitude(&pp, &manual_sp, &att, &actuators, &global_pos, last_run,
-                        roll_spd_int, pitch_spd_int, roll_err_filtree, roll_spd_filtree);
+                        roll_spd_int, pitch_spd_int, roll_spd_filtree, pitch_spd_filtree);
 
                 //Get vehicule status
                 orb_copy(ORB_ID(vehicle_status), vstatus_sub, &vstatus);
