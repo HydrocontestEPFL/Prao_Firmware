@@ -12,6 +12,13 @@
 ekf2 start
 
 #
+# Start the palpeur
+#
+ems22 start
+
+
+#
 # Start attitude controller.
 #
 PRAO start
+
