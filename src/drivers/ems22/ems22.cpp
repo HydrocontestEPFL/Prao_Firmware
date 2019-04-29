@@ -92,7 +92,7 @@ PARAM_DEFINE_INT32(DRV_ENC_OFFSET, 0);
 /* Configuration Constants */
 #define EMS22_BUS           PX4_I2C_BUS_EXPANSION
 #define EMS22_BASEADDR      0x30 /* 7-bit address */
-#define EMS22_DEVICE_PATH   "/dev/encoder"
+#define EMS22_DEVICE_PATH   "/dev/ems22"
 
 /* Nano Registers addresses */
 
@@ -196,7 +196,7 @@ private:
     int					measure();
     int					collect();
     /**
-    * Static trampoline from the workq context; because we don't have a
+    * Static trampoline from the workg context; because we don't have a
     * generic workq wrapper yet.
     *
     * @param arg		Instance pointer for the driver that is polling.

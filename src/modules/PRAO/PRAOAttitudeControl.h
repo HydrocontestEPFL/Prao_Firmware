@@ -54,6 +54,7 @@
 #include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
+#include <uORB/topics/distance_sensor.h>
 
 // Modif Fab
 #include <stdio.h>
