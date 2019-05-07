@@ -23,11 +23,12 @@ Rudder mixer
 -------------
 Two scalers total (output, yaw).
 
-The mixer is configure as a pass throught.
+The mixer is configure as a pass through.
 
 M: 1
-O:      10000  10000      0 -10000  10000
+O:      7040  7040        0 -5000  5000
 S: 0 2  10000  10000      0 -10000  10000
+
 
 Main foil mixer
 -------------
@@ -38,6 +39,7 @@ The mixer is configure as a pass through.
 M: 1
 O:      10000  10000      0 -10000  10000
 S: 0 1  10000  10000      0 -10000  10000
+
 
 Small foil mixer
 -------------

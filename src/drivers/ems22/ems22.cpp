@@ -90,7 +90,7 @@
 PARAM_DEFINE_INT32(DRV_ENC_OFFSET, 0);
 
 /* Configuration Constants */
-#define EMS22_BUS           PX4_I2C_BUS_EXPANSION
+#define EMS22_BUS           PX4_I2C_BUS_ONBOARD
 #define EMS22_BASEADDR      0x30 /* 7-bit address */
 #define EMS22_DEVICE_PATH   "/dev/ems22"
 
