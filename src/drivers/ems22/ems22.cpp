@@ -231,7 +231,7 @@ EMS22::EMS22(int bus, int address) :
     I2C::_retries = 3;
 
     // enable debug() calls
-    _debug_enabled = false;
+    _debug_enabled = true;
 
     // work_cancel in the dtor will explode if we don't do this...
     memset(&_work, 0, sizeof(_work));
