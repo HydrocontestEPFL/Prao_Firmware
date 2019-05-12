@@ -68,16 +68,11 @@ using matrix::Quatf;
 using uORB::Subscription;
 
 //Initialise la structure de parametres
-// Peut etre besoin de mettre params juste apres struct
 struct _params {
-    float yaw_p;
-    float yaw_i;
     float roll_p;
     float roll_i;
     float pitch_p;
     float pitch_i;
-    float int_max_pitch;
-    float int_max_roll;
     float pitch_scl;
     float roll_scl;
     float mode;
@@ -90,18 +85,20 @@ struct _params {
     float k_filter;
     float a_filter;
     float alpha_filter;
+    float reverse;
+    float lift_p;
+    float lift_i;
+    float lift_scl;
+    float lift_int_max;
+    float lift_setpoint;
 };
 
 //Initialise la structure des handles de param
 struct _param_handles {
-    param_t yaw_p;
-    param_t yaw_i;
     param_t roll_p;
     param_t roll_i;
     param_t pitch_p;
     param_t pitch_i;
-    param_t int_max_pitch;
-    param_t int_max_roll;
     param_t pitch_scl;
     param_t roll_scl;
     param_t mode;
@@ -114,44 +111,10 @@ struct _param_handles {
     param_t k_filter;
     param_t a_filter;
     param_t alpha_filter;
+    param_t reverse;
+    param_t lift_p;
+    param_t lift_i;
+    param_t lift_scl;
+    param_t lift_int_max;
+    param_t lift_setpoint;
 };
-
-// MODIFIE LE HEADER FAB
-struct PRAO_ControlData {
-    float airspeed_min;
-    float airspeed_max;
-    float airspeed;
-    float scaler;
-    bool lock_integrator;
-};
-class PRAOAttitudeControl_Controller
-{
-// public:
-    PRAOAttitudeControl_Controller(const char *name);
-    virtual ~PRAOAttitudeControl_Controller() = default;
-    virtual float control_attitude(const struct PRAO_ControlData &ctl_data) = 0;
-    virtual float control_euler_rate(const struct PRAO_ControlData &ctl_data) = 0;
-    virtual float control_bodyrate(const struct PRAO_ControlData &ctl_data) = 0;
-    /* Setters */
-    void set_integrator_max(float max);
-    /* Getters */ /*
-    float get_rate_error();
-    float get_desired_rate();
-    float get_desired_bodyrate();
-    float get_integrator();
-    void reset_integrator(); */
-// protected:
-    uint64_t _last_run;
-    float _integrator_max;
-    float _last_output;
-    float _integrator;
-    float constrain_airspeed(float airspeed, float minspeed, float maxspeed);
-};
-PRAOAttitudeControl_Controller::PRAOAttitudeControl_Controller(const char *name) :
-        _last_run(0),
-        _integrator_max(0.0f),
-        _last_output(0.0f),
-        _integrator(0.0f)
-{
-}
-// FIN MODIF HEADER FAB

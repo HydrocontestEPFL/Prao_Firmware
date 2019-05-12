@@ -109,7 +109,8 @@ int parameters_update(const struct param_handles *h, struct params *p);
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
                       const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
                       const struct vehicle_global_position_s *global_pos, uint64_t last_run,
-                              float roll_spd_int, float pitch_spd_int, float roll_spd_filtree, float pitch_spd_filtree, const struct distance_sensor_s *dist_sensor);
+                      float roll_spd_int, float pitch_spd_int, float roll_spd_filtree, float pitch_spd_filtree,
+                      const struct distance_sensor_s *dist_sensor, float lift_int);
 
 //Definit certaines variables
 static bool thread_should_exit = false;		/**< Daemon exit flag */
@@ -121,8 +122,6 @@ static struct _param_handles ph; // ph est le nom de la structure qui gere le pa
 //Fonction d'initialisation des parametres
 int parameters_init(struct _param_handles *h)
 {
-    h->yaw_p    =   param_find("PRAO_Y_P");
-    h->yaw_i    =   param_find("PRAO_Y_I");
     h->roll_p   =   param_find("PRAO_R_P");
     h->roll_i   =   param_find("PRAO_R_I");
     h->pitch_p  =   param_find("PRAO_P_P");
@@ -139,20 +138,22 @@ int parameters_init(struct _param_handles *h)
     h->k_filter  =  param_find("PRAO_K_FILTER");
     h->a_filter  =  param_find("PRAO_A_FILTER");
     h->alpha_filter  = param_find("PRAO_ALPHA_FILT");
+    h->reverse = param_find("PRAO_REVERSE");
+    h->lift_p = param_find("PRAO_L_P");
+    h->lift_i = param_find("PRAO_L_I");
+    h->lift_scl = param_find("PRAO_L_SCALER");
+    h->lift_int_max = param_find("PRAO_L_INT_MAX");
+    h->lift_setpoint = param_find("PRAO_ALTITUDE");
     return 0;
 }
 
 // Fonction d'updating des parametres
 int parameters_update(const struct _param_handles *h, struct _params *p)
 {
-    param_get(h->yaw_p, &(p->yaw_p));
-    param_get(h->yaw_i, &(p->yaw_i));
     param_get(h->roll_p, &(p->roll_p));
     param_get(h->roll_i, &(p->roll_i));
     param_get(h->pitch_p, &(p->pitch_p));
     param_get(h->pitch_i, &(p->pitch_i));
-    param_get(h->int_max_pitch, &(p->int_max_pitch));
-    param_get(h->int_max_roll, &(p->int_max_roll));
     param_get(h->pitch_scl, &(p->pitch_scl));
     param_get(h->roll_scl, &(p->roll_scl));
     param_get(h->mode, &(p->mode));
@@ -165,18 +166,48 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
     param_get(h->k_filter, &(p->k_filter));
     param_get(h->a_filter, &(p->a_filter));
     param_get(h->alpha_filter, &(p->alpha_filter));
+    param_get(h->reverse, &(p->reverse));
+    param_get(h->lift_p, &(p->lift_p));
+    param_get(h->lift_i, &(p->lift_i));
+    param_get(h->lift_scl, &(p->lift_scl));
+    param_get(h->lift_int_max, &(p->lift_int_max));
+    param_get(h->lift_setpoint, &(p->lift_setpoint));
     return 0;
 }
 
 // Fonction de controle appelee dans le while
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
-        const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
-                const struct vehicle_global_position_s *global_pos, uint64_t last_run,
-                        float roll_spd_int, float pitch_spd_int, float roll_spd_filtree, float pitch_spd_filtree, const  distance_sensor_s *dist_sensor) {
+                      const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
+                      const struct vehicle_global_position_s *global_pos, uint64_t last_run,
+                      float roll_spd_int, float pitch_spd_int, float roll_spd_filtree, float pitch_spd_filtree,
+                      const  distance_sensor_s *dist_sensor, float lift_int) {
 
-    if (para->mode > -0.5f && para->mode < 0.5f) {
+    // Calcul de la vitesse
+    float speed = sqrt(pow(global_pos->vel_n, 2) + pow(global_pos->vel_e, 2));
+
+    // Get le dt
+    uint64_t dt_micros = hrt_elapsed_time(&last_run);
+    last_run = hrt_absolute_time();
+    float dt = (float) dt_micros * 1e-6f;
+
+    // Borner la vitesse pour la mettre dans le scaler
+    float speed_ctrl;
+    if (speed < 1) {
+        speed_ctrl = 1.0f;
+    } else {
+        speed_ctrl = speed;
+    }
+
+    //Faire les scalers
+    float roll_scaler = para->roll_scl / powf(speed_ctrl, 2);
+    float pitch_scaler = para->pitch_scl / powf(speed_ctrl, 2);
+    float lift_scaler = para->lift_scl / powf(speed_ctrl, 2);
+
+    if (para->reverse < 0.5f) {
+        /** Si on est en mode reverse (marche arrière) on met un moins sur le throttle
+         * manual_sp->z est defini sur 0..1 **/
         //On controle le roll avec la RC
-        actuators->control[0] = dist_sensor->current_distance;
+        actuators->control[0] = manual_sp->y;
 
         //On controle le pitch avec la RC
         actuators->control[1] = manual_sp->x;
@@ -185,48 +216,41 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         actuators->control[2] = manual_sp->r;
 
         //On controle le throttle avec la RC
-        actuators->control[3] = manual_sp->z;
-    }
-    else if (para->mode > 0.5f && para->mode < 1.5f){
-        // Calcul de la vitesse
-        float speed = sqrt(pow(global_pos->vel_n,2) + pow(global_pos->vel_e,2));
+        actuators->control[3] = -manual_sp->z;
+    } else {
+        if (para->mode > -0.5f && para->mode < 0.5f) {
+            //On controle le roll avec la RC
+            actuators->control[0] = manual_sp->y;
 
-        // Get le dt
-        uint64_t dt_micros = hrt_elapsed_time(&last_run);
-        last_run = hrt_absolute_time();
-        float dt = (float)dt_micros * 1e-6f;
+            //On controle le pitch avec la RC
+            actuators->control[1] = manual_sp->x;
 
-        // Borner la vitesse pour la mettre dans le scaler
-        float speed_ctrl;
-        if (speed < 1) {
-            speed_ctrl = 1.0f;
-        } else {
-            speed_ctrl = speed;
-        }
+            //On controle le yaw avec la RC
+            actuators->control[2] = manual_sp->r;
 
-        //Faire les scalers
-        float roll_scaler = para->roll_scl / powf(speed_ctrl,2);
-        float pitch_scaler = para->pitch_scl / powf(speed_ctrl,2);
+            //On controle le throttle avec la RC
+            actuators->control[3] = manual_sp->z;
+        } else if (para->mode > 0.5f && para->mode < 1.5f) {
+            //Controle du roll
 
+            //Trouver l'erreur en position
+            float roll_err = matrix::Eulerf(
+                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
 
-        //Controle du roll
+            //Terme proportionnel
+            float roll_spd_prop = roll_err * para->roll_p;
 
-        //Trouver l'erreur en position
-        float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
+            //Terme integrateur
+            roll_spd_int = math::constrain(roll_spd_int + roll_err * dt * para->roll_i, -para->roll_int_max,
+                                           para->roll_int_max);
 
-        //Terme proportionnel
-        float roll_spd_prop = roll_err * para->roll_p;
+            // Addition des termes
+            float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
-        //Terme integrateur
-        roll_spd_int = math::constrain(roll_spd_int + roll_err*dt*para->roll_i, - para->roll_int_max, para->roll_int_max);
+            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
+            actuators->control[0] = roll_output;
 
-        // Addition des termes
-        float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
-
-        // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-        actuators->control[0]= roll_output;
-
-
+/**
         // Controle du pitch
 
         // Trouver l'erreur en position
@@ -242,66 +266,65 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         float pitch_output = pitch_scaler * (pitch_spd_prop + pitch_spd_int);
 
         // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-        actuators->control[1]= pitch_output;
+        actuators->control[1]= pitch_output; **/
 
 
-        //le z et y sont tires de manual_control_setpoint.msg
-        //On controle le yaw avec la RC
-        actuators->control[2]=manual_sp->r;
+            // Controle du lift
 
-        //On controle le throttle avec la RC
-        actuators->control[3]=manual_sp->z;
-    }
-    else if (para->mode > 1.5f && para->mode < 2.5f) {
-        // Calcul de la vitesse
-        float speed = sqrt(pow(global_pos->vel_n,2) + pow(global_pos->vel_e,2));
+            // Trouver l'erreur en position
+            float lift_err = para->lift_setpoint - dist_sensor->current_distance;
 
-        // Get le dt
-        uint64_t dt_micros = hrt_elapsed_time(&last_run);
-        last_run = hrt_absolute_time();
-        float dt = (float)dt_micros * 1e-6f;
+            //Terme proportionnel
+            float lift_prop = lift_err * para->lift_p;
 
-        // Borner la vitesse pour la mettre dans le scaler
-        float speed_ctrl;
-        if (speed < 1) {
-            speed_ctrl = 1.0f;
-        } else {
-            speed_ctrl = speed;
-        }
+            //Terme integrateur
+            lift_int = math::constrain(lift_int + lift_err * dt * para->lift_i, -para->lift_int_max,
+                                       para->lift_int_max);
 
-        //Faire les scalers
-        float roll_scaler = para->roll_scl / powf(speed_ctrl,2);
-        float pitch_scaler = para->pitch_scl / powf(speed_ctrl,2);
+            // Addition des termes
+            float lift_output = lift_scaler * (lift_prop + lift_int);
+
+            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
+            actuators->control[1] = lift_output;
 
 
-        // Controle du roll
+            //le z et y sont tires de manual_control_setpoint.msg
+            //On controle le yaw avec la RC
+            actuators->control[2] = manual_sp->r;
 
-        // Trouver vitesse de roll
-        float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-        float roll_spd_sp_nonsat = - roll_err * (1/ para->roll_tc); // ya un moins du au feedback
+            //On controle le throttle avec la RC
+            actuators->control[3] = manual_sp->z;
+        } else if (para->mode > 1.5f && para->mode < 2.5f) {
+            // Controle du roll
 
-        //Saturation de la consigne de vitesse de roll
-        float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, - para->roll_spd_max, para->roll_spd_max);
+            // Trouver vitesse de roll
+            float roll_err = matrix::Eulerf(
+                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
+            float roll_spd_sp_nonsat = -roll_err * (1 / para->roll_tc); // ya un moins du au feedback
 
-        //Saturation de la vitesse de roll ( filtration des vibrations )
-        float roll_spd = math::constrain(att->rollspeed, - para->roll_spd_max, para->roll_spd_max);
+            //Saturation de la consigne de vitesse de roll
+            float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max);
 
-        //Trouver error de roll speed
-        float roll_spd_err = roll_spd_sp - roll_spd;
+            //Saturation de la vitesse de roll ( filtration des vibrations )
+            float roll_spd = math::constrain(att->rollspeed, -para->roll_spd_max, para->roll_spd_max);
 
-        // Terme prop de roll speed
-        float roll_spd_prop = roll_spd_err * para->roll_p;
+            //Trouver error de roll speed
+            float roll_spd_err = roll_spd_sp - roll_spd;
 
-        // Terme int de roll speed
-        roll_spd_int = math::constrain(roll_spd_int + roll_spd_err*dt*para->roll_i, - para->roll_int_max, para->roll_int_max);
+            // Terme prop de roll speed
+            float roll_spd_prop = roll_spd_err * para->roll_p;
 
-        // Addition des termes
-        float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
+            // Terme int de roll speed
+            roll_spd_int = math::constrain(roll_spd_int + roll_spd_err * dt * para->roll_i, -para->roll_int_max,
+                                           para->roll_int_max);
 
-        // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-        actuators->control[0]= roll_output;
+            // Addition des termes
+            float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
+            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
+            actuators->control[0] = roll_output;
 
+/**
         // Controle du pitch
 
         // Trouver vitesse de pitch
@@ -327,160 +350,126 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         float pitch_output = pitch_scaler * (pitch_spd_prop + pitch_spd_int);
 
         // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-        actuators->control[1]= pitch_output;
+        actuators->control[1]= pitch_output; **/
 
 
-        //le z et y sont tires de manual_control_setpoint.msg
-        //On controle le yaw avec la RC
-        actuators->control[2]=manual_sp->r;
+            //On controle le pitch avec la RC
+            actuators->control[1] = manual_sp->x;
 
-        //On controle le throttle avec la RC
-        actuators->control[3]=manual_sp->z;
-    }
-    else if (para->mode > 2.5f && para->mode < 3.5f) {
-        // Calcul de la vitesse
-        float speed = sqrt(pow(global_pos->vel_n,2) + pow(global_pos->vel_e,2));
+            //le z et y sont tires de manual_control_setpoint.msg
+            //On controle le yaw avec la RC
+            actuators->control[2] = manual_sp->r;
 
-        // Get le dt
-        uint64_t dt_micros = hrt_elapsed_time(&last_run);
-        last_run = hrt_absolute_time();
-        float dt = (float)dt_micros * 1e-6f;
+            //On controle le throttle avec la RC
+            actuators->control[3] = manual_sp->z;
+        } else if (para->mode > 2.5f && para->mode < 3.5f) {
+            // Controle du roll
 
-        // Borner la vitesse pour la mettre dans le scaler
-        float speed_ctrl;
-        if (speed < 1) {
-            speed_ctrl = 1.0f;
+            // Trouver vitesse de roll
+            float roll_err = matrix::Eulerf(
+                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
+            float roll_spd_sp_nonsat = -roll_err * (1 / para->roll_tc); // ya un moins du au feedback
+
+            //Saturation de la consigne de vitesse de roll
+            float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max);
+
+            //Filtrer la vitesse de roll
+            roll_spd_filtree = (para->k_filter * dt * att->rollspeed + roll_spd_filtree) / (para->a_filter * dt + 1.0f);
+
+            //Saturation de la vitesse de roll (filtrage des vibrations)
+            float roll_spd_final = math::constrain(roll_spd_filtree, -para->roll_spd_max, para->roll_spd_max);
+
+            //Calcul de l'erreur de vitesse de roll
+            float roll_spd_err = roll_spd_sp - roll_spd_final;
+
+            // Terme prop de roll speed
+            float roll_spd_prop = roll_spd_err * para->roll_p;
+
+            // Terme int de roll speed
+            roll_spd_int = math::constrain(roll_spd_int + roll_spd_err * dt * para->roll_i, -para->roll_int_max,
+                                           para->roll_int_max);
+
+            // Addition des termes
+            float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
+
+            // Envoyer dans actuatoors ( les numeros de channel sont tires de actuator_controls )
+            actuators->control[0] = roll_output;
+
+
+            // Controle du pitch
+
+            // Trouver vitesse de pitch
+            float pitch_err = matrix::Eulerf(
+                    matrix::Quatf(att->q)).theta(); //att est le nom de la struct qui gere vehicule_attitude
+            float pitch_spd_sp_nonsat = -pitch_err * (1 / para->pitch_tc); // ya un moins du au feedback
+
+            //Saturation de la consigne de vitesse de pitch
+            float pitch_spd_sp = math::constrain(pitch_spd_sp_nonsat, -para->pitch_spd_max, para->pitch_spd_max);
+
+            //Filtrer la vitesse de pitch
+            pitch_spd_filtree =
+                    (para->k_filter * dt * att->pitchspeed + pitch_spd_filtree) / (para->a_filter * dt + 1.0f);
+
+            //Saturation de la vitesse de pitch (filtrage des vibrations)
+            float pitch_spd_final = math::constrain(pitch_spd_filtree, -para->pitch_spd_max, para->pitch_spd_max);
+
+            //Calcul de l'error de vitesse de pitch
+            float pitch_spd_err = pitch_spd_sp - pitch_spd_final;
+
+            // Terme prop de pitch speed
+            float pitch_spd_prop = pitch_spd_err * para->pitch_p;
+
+            // Terme int de pitch speed
+            pitch_spd_int = math::constrain(pitch_spd_int + pitch_spd_err * dt * para->pitch_i, -para->pitch_int_max,
+                                            para->pitch_int_max);
+
+            // Addition des termes
+            float pitch_output = pitch_scaler * (pitch_spd_prop + pitch_spd_int);
+
+            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
+            actuators->control[1] = pitch_output;
+
+
+            //le z et y sont tires de manual_control_setpoint.msg
+            //On controle le yaw avec la RC
+            actuators->control[2] = manual_sp->r;
+
+            //On controle le throttle avec la RC
+            actuators->control[3] = manual_sp->z;
         } else {
-            speed_ctrl = speed;
-        }
+            // Controle du roll
 
-        //Faire les scalers
-        float roll_scaler = para->roll_scl / powf(speed_ctrl,2);
-        float pitch_scaler = para->pitch_scl / powf(speed_ctrl,2);
+            // Trouver vitesse de roll
+            float roll_err = matrix::Eulerf(
+                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
+            float roll_spd_sp_nonsat = -roll_err * (1 / para->roll_tc); // ya un moins du au feedback
 
+            //Saturation de la consigne de vitesse de roll
+            float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max);
 
-        // Controle du roll
+            //Filtrer la vitesse de roll
+            roll_spd_filtree = para->alpha_filter * att->rollspeed + (1.0f - para->alpha_filter) * roll_spd_filtree;
 
-        // Trouver vitesse de roll
-        float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-        float roll_spd_sp_nonsat = - roll_err * (1/ para->roll_tc); // ya un moins du au feedback
+            //Saturation de la vitesse de roll (filtrage des vibrations)
+            float roll_spd_final = math::constrain(roll_spd_filtree, -para->roll_spd_max, para->roll_spd_max);
 
-        //Saturation de la consigne de vitesse de roll
-        float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, - para->roll_spd_max, para->roll_spd_max);
+            //Calcul de l'erreur de vitesse de roll
+            float roll_spd_err = roll_spd_sp - roll_spd_final;
 
-        //Filtrer la vitesse de roll
-        roll_spd_filtree = (para->k_filter*dt*att->rollspeed + roll_spd_filtree)/(para->a_filter*dt + 1.0f);
+            // Terme prop de roll speed
+            float roll_spd_prop = roll_spd_err * para->roll_p;
 
-        //Saturation de la vitesse de roll (filtrage des vibrations)
-        float roll_spd_final = math::constrain(roll_spd_filtree,- para->roll_spd_max, para->roll_spd_max);
+            // Terme int de roll speed
+            roll_spd_int = math::constrain(roll_spd_int + roll_spd_err * dt * para->roll_i, -para->roll_int_max,
+                                           para->roll_int_max);
 
-        //Calcul de l'erreur de vitesse de roll
-        float roll_spd_err = roll_spd_sp - roll_spd_final;
+            // Addition des termes
+            float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
-        // Terme prop de roll speed
-        float roll_spd_prop = roll_spd_err * para->roll_p;
+            // Envoyer dans actuatoors ( les numeros de channel sont tires de actuator_controls )
+            actuators->control[0] = roll_output;
 
-        // Terme int de roll speed
-        roll_spd_int = math::constrain(roll_spd_int + roll_spd_err*dt*para->roll_i, - para->roll_int_max, para->roll_int_max);
-
-        // Addition des termes
-        float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
-
-        // Envoyer dans actuatoors ( les numeros de channel sont tires de actuator_controls )
-        actuators->control[0]= roll_output;
-
-
-        // Controle du pitch
-
-        // Trouver vitesse de pitch
-        float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta(); //att est le nom de la struct qui gere vehicule_attitude
-        float pitch_spd_sp_nonsat = - pitch_err * (1/ para->pitch_tc); // ya un moins du au feedback
-
-        //Saturation de la consigne de vitesse de pitch
-        float pitch_spd_sp = math::constrain(pitch_spd_sp_nonsat, - para->pitch_spd_max, para->pitch_spd_max);
-
-        //Filtrer la vitesse de pitch
-        pitch_spd_filtree = (para->k_filter*dt*att->pitchspeed + pitch_spd_filtree)/(para->a_filter*dt + 1.0f);
-
-        //Saturation de la vitesse de pitch (filtrage des vibrations)
-        float pitch_spd_final = math::constrain(pitch_spd_filtree, - para->pitch_spd_max, para->pitch_spd_max);
-
-        //Calcul de l'error de vitesse de pitch
-        float pitch_spd_err = pitch_spd_sp - pitch_spd_final;
-
-        // Terme prop de pitch speed
-        float pitch_spd_prop = pitch_spd_err * para->pitch_p;
-
-        // Terme int de pitch speed
-        pitch_spd_int = math::constrain(pitch_spd_int + pitch_spd_err*dt*para->pitch_i, - para->pitch_int_max, para->pitch_int_max);
-
-        // Addition des termes
-        float pitch_output = pitch_scaler * (pitch_spd_prop + pitch_spd_int);
-
-        // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-        actuators->control[1]= pitch_output;
-
-
-        //le z et y sont tires de manual_control_setpoint.msg
-        //On controle le yaw avec la RC
-        actuators->control[2]=manual_sp->r;
-
-        //On controle le throttle avec la RC
-        actuators->control[3]=manual_sp->z;
-    }
-    else {
-        // Calcul de la vitesse
-        float speed = sqrt(pow(global_pos->vel_n,2) + pow(global_pos->vel_e,2));
-
-        // Get le dt
-        uint64_t dt_micros = hrt_elapsed_time(&last_run);
-        last_run = hrt_absolute_time();
-        float dt = (float)dt_micros * 1e-6f;
-
-        // Borner la vitesse pour la mettre dans le scaler
-        float speed_ctrl;
-        if (speed < 1) {
-            speed_ctrl = 1.0f;
-        } else {
-            speed_ctrl = speed;
-        }
-
-        //Faire les scalers
-        float roll_scaler = para->roll_scl / powf(speed_ctrl,2);
-        float pitch_scaler = para->pitch_scl / powf(speed_ctrl,2);
-
-
-        // Controle du roll
-
-        // Trouver vitesse de roll
-        float roll_err = matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-        float roll_spd_sp_nonsat = - roll_err * (1/ para->roll_tc); // ya un moins du au feedback
-
-        //Saturation de la consigne de vitesse de roll
-        float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, - para->roll_spd_max, para->roll_spd_max);
-
-        //Filtrer la vitesse de roll
-        roll_spd_filtree = para->alpha_filter*att->rollspeed + (1.0f - para->alpha_filter)*roll_spd_filtree;
-
-        //Saturation de la vitesse de roll (filtrage des vibrations)
-        float roll_spd_final = math::constrain(roll_spd_filtree,- para->roll_spd_max, para->roll_spd_max);
-
-        //Calcul de l'erreur de vitesse de roll
-        float roll_spd_err = roll_spd_sp - roll_spd_final;
-
-        // Terme prop de roll speed
-        float roll_spd_prop = roll_spd_err * para->roll_p;
-
-        // Terme int de roll speed
-        roll_spd_int = math::constrain(roll_spd_int + roll_spd_err*dt*para->roll_i, - para->roll_int_max, para->roll_int_max);
-
-        // Addition des termes
-        float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
-
-        // Envoyer dans actuatoors ( les numeros de channel sont tires de actuator_controls )
-        actuators->control[0]= roll_output;
-
-
+/**
         // Controle du pitch
 
         // Trouver vitesse de pitch
@@ -509,215 +498,235 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         float pitch_output = pitch_scaler * (pitch_spd_prop + pitch_spd_int);
 
         // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-        actuators->control[1]= pitch_output;
+        actuators->control[1]= pitch_output; **/
 
 
-        //le z et y sont tires de manual_control_setpoint.msg
-        //On controle le yaw avec la RC
-        actuators->control[2]=manual_sp->r;
+            // Controle du lift
 
-        //On controle le throttle avec la RC
-        actuators->control[3]=manual_sp->z;
+            // Trouver l'erreur en position
+            float lift_err = para->lift_setpoint - dist_sensor->current_distance;
+
+            //Terme proportionnel
+            float lift_prop = lift_err * para->lift_p;
+
+            //Terme integrateur
+            lift_int = math::constrain(lift_int + lift_err * dt * para->lift_i, -para->lift_int_max,
+                                       para->lift_int_max);
+
+            // Addition des termes
+            float lift_output = lift_scaler * (lift_prop + lift_int);
+
+            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
+            actuators->control[1] = lift_output;
+
+
+            //le z et y sont tires de manual_control_setpoint.msg
+            //On controle le yaw avec la RC
+            actuators->control[2] = manual_sp->r;
+
+            //On controle le throttle avec la RC
+            actuators->control[3] = manual_sp->z;
+        }
     }
 }
 
 //Main thread
-int PRAO_thread_main(int argc, char *argv[])
-{
-    PX4_INFO("Hello water!");
+    int PRAO_thread_main(int argc, char *argv[])
+    {
+        PX4_INFO("Hello water!");
 
-    parameters_init(&ph);
-    parameters_update(&ph, &pp);
+        parameters_init(&ph);
+        parameters_update(&ph, &pp);
 
-    // Initialiser les structures donnees par les subscriptions
-    struct vehicle_attitude_s att;
-    memset(&att, 0, sizeof(att));
-    struct vehicle_attitude_setpoint_s att_sp;
-    memset(&att_sp, 0, sizeof(att_sp));
-    struct vehicle_global_position_s global_pos;
-    memset(&global_pos, 0, sizeof(global_pos));
-    struct manual_control_setpoint_s manual_sp;
-    memset(&manual_sp, 0, sizeof(manual_sp));
-    struct vehicle_status_s vstatus;
-    memset(&vstatus, 0, sizeof(vstatus));
-    struct position_setpoint_s global_sp;
-    memset(&global_sp, 0, sizeof(global_sp));
-    struct distance_sensor_s dist_sensor;
-    memset (&dist_sensor, 0, sizeof(dist_sensor));
-    //struct airspeed_s airspd;
-    //memset(&airspd, 0, sizeof(airspd));
+        // Initialiser les structures donnees par les subscriptions
+        struct vehicle_attitude_s att;
+        memset(&att, 0, sizeof(att));
+        struct vehicle_attitude_setpoint_s att_sp;
+        memset(&att_sp, 0, sizeof(att_sp));
+        struct vehicle_global_position_s global_pos;
+        memset(&global_pos, 0, sizeof(global_pos));
+        struct manual_control_setpoint_s manual_sp;
+        memset(&manual_sp, 0, sizeof(manual_sp));
+        struct vehicle_status_s vstatus;
+        memset(&vstatus, 0, sizeof(vstatus));
+        struct position_setpoint_s global_sp;
+        memset(&global_sp, 0, sizeof(global_sp));
+        struct distance_sensor_s dist_sensor;
+        memset (&dist_sensor, 0, sizeof(dist_sensor));
+        //struct airspeed_s airspd;
+        //memset(&airspd, 0, sizeof(airspd));
 
-    // Initialisation des output structures
-    struct actuator_controls_s actuators;
-    memset(&actuators, 0, sizeof(actuators));
-
-
-    //Initialiser la structure d'output à 0
-    for (unsigned i = 0; i < (sizeof(actuators.control) / sizeof(actuators.control[0])); i++) {
-        actuators.control[i] = 0.0f;
-    }
+        // Initialisation des output structures
+        struct actuator_controls_s actuators;
+        memset(&actuators, 0, sizeof(actuators));
 
 
-    //Advertise that we will publish actuators values
-    orb_advert_t actuator_pub = orb_advertise(ORB_ID(actuator_controls_0), &actuators);
-
-
-    //Faire toutes les subscriptions ( peut etre besoin de mettre un int devant )
-    // Maybe limiter l'update rate avec orb_set_interval (voir dans exemples/uuv_exemple)
-    int att_sub = orb_subscribe(ORB_ID(vehicle_attitude));
-    int att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
-    //int ctrl_state_sub = orb_subscribe(ORB_ID(control_state));
-    //int accel_sub = orb_subscribe_multi(ORB_ID(sensor_accel), 0);
-    //int vcontrol_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
-    //int distance_sensor_sub = orb_subscribe(ORB_ID(distance_sensor));
-    int params_sub = orb_subscribe(ORB_ID(parameter_update));
-    int manual_sp_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
-    int global_pos_sub = orb_subscribe(ORB_ID(vehicle_global_position));
-    //int local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));
-    int vstatus_sub = orb_subscribe(ORB_ID(vehicle_status));
-    //int vehicle_land_detected_sub = orb_subscribe(ORB_ID(vehicle_land_detected));
-    int dist_sensor_sub = orb_subscribe(ORB_ID(distance_sensor));
-
-    //Setup of loop
-    struct pollfd fds[2];
-    fds[0].fd = params_sub;
-    fds[0].events = POLLIN;
-    fds[1].fd = att_sub;
-    fds[1].events = POLLIN;
-
-    // Initialisation of parameters for dt
-    uint64_t last_run;
-    last_run = hrt_absolute_time();
-
-    // Initialisation de termes reutilises
-    float roll_spd_int = 0;
-    float pitch_spd_int = 0;
-    float roll_spd_filtree = 0;
-    float pitch_spd_filtree = 0;
-
-    while (!thread_should_exit) {
-        //poll waits 500ms to make fds ready, 2 is number of arguments in fds
-        int ret = poll(fds,2,500);
-
-        if (ret<0) {
-            warnx("Error de loop");
-        } else if (ret==0) {
-          //Nothing has changed
-        } else {
-            //Only update parameters if they have changed
-            if (fds[0].revents & POLLIN ) {
-                //ecrire l update dans parameter_update
-                struct parameter_update_s update;
-                orb_copy(ORB_ID(parameter_update), params_sub, &update);
-                /* if a param update occured, re-read our parameters */
-                parameters_update(&ph, &pp);
-            }
-            //Only change controller if attitude changed
-            if (fds[1].revents & POLLIN) {
-                //Check what is new
-                bool pos_updated;
-                orb_check(global_pos_sub, &pos_updated);
-                bool att_sp_updated;
-                orb_check(att_sp_sub, &att_sp_updated);
-                bool manual_sp_updated;
-                orb_check(manual_sp_sub, &manual_sp_updated);
-                bool dist_sensor_updated;
-                orb_check(dist_sensor_sub, &dist_sensor_updated);
-                //Get local copy of attitude
-                orb_copy(ORB_ID(vehicle_attitude), att_sub, &att);
-
-                //Copier le pos si il est change
-                if (pos_updated) {
-                    orb_copy(ORB_ID(vehicle_global_position), global_pos_sub, &global_pos);
-                }
-
-                //Copier l'attitude sp si il est change
-                if (att_sp_updated) {
-                    orb_copy(ORB_ID(vehicle_attitude_setpoint), att_sp_sub, &att_sp);
-                }
-
-                //Copier le manual sp si il est change
-                if (manual_sp_updated){
-                    orb_copy(ORB_ID(manual_control_setpoint), manual_sp_sub, &manual_sp);
-                }
-
-                //Copier le distance sensor si il est changé
-                if (dist_sensor_updated) {
-                    orb_copy(ORB_ID(distance_sensor), dist_sensor_sub, &dist_sensor);
-                }
-
-                //Appeler la fonction qui controle les actuators
-                control_attitude(&pp, &manual_sp, &att, &actuators, &global_pos, last_run,
-                        roll_spd_int, pitch_spd_int, roll_spd_filtree, pitch_spd_filtree, &dist_sensor);
-
-                //Get vehicule status
-                orb_copy(ORB_ID(vehicle_status), vstatus_sub, &vstatus);
-
-                //Sanity check then publish actuators outputs
-                if (PX4_ISFINITE(actuators.control[0]) &&
-                    PX4_ISFINITE(actuators.control[1]) &&
-                    PX4_ISFINITE(actuators.control[2]) &&
-                    PX4_ISFINITE(actuators.control[3])) {
-                        orb_publish(ORB_ID(actuator_controls_0), actuator_pub, &actuators);
-                }
-                    // J ai pas mis de verbose
-            }
+        //Initialiser la structure d'output à 0
+        for (unsigned i = 0; i < (sizeof(actuators.control) / sizeof(actuators.control[0])); i++) {
+            actuators.control[i] = 0.0f;
         }
 
-    }
-    warnx("Exiting, stopping all motors");
-    thread_running = false;
+
+        //Advertise that we will publish actuators values
+        orb_advert_t actuator_pub = orb_advertise(ORB_ID(actuator_controls_0), &actuators);
+
+
+        //Faire toutes les subscriptions ( peut etre besoin de mettre un int devant )
+        // Maybe limiter l'update rate avec orb_set_interval (voir dans exemples/uuv_exemple)
+        int att_sub = orb_subscribe(ORB_ID(vehicle_attitude));
+        int att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
+        //int ctrl_state_sub = orb_subscribe(ORB_ID(control_state));
+        //int accel_sub = orb_subscribe_multi(ORB_ID(sensor_accel), 0);
+        //int vcontrol_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
+        int params_sub = orb_subscribe(ORB_ID(parameter_update));
+        int manual_sp_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
+        int global_pos_sub = orb_subscribe(ORB_ID(vehicle_global_position));
+        //int local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));
+        int vstatus_sub = orb_subscribe(ORB_ID(vehicle_status));
+        //int vehicle_land_detected_sub = orb_subscribe(ORB_ID(vehicle_land_detected));
+        int dist_sensor_sub = orb_subscribe(ORB_ID(distance_sensor));
+
+        //Setup of loop
+        struct pollfd fds[2];
+        fds[0].fd = params_sub;
+        fds[0].events = POLLIN;
+        fds[1].fd = att_sub;
+        fds[1].events = POLLIN;
+
+        // Initialisation of parameters for dt
+        uint64_t last_run;
+        last_run = hrt_absolute_time();
+
+        // Initialisation de termes reutilises
+        float roll_spd_int = 0;
+        float pitch_spd_int = 0;
+        float roll_spd_filtree = 0;
+        float pitch_spd_filtree = 0;
+        float lift_int = 0;
+
+        while (!thread_should_exit) {
+            //poll waits 500ms to make fds ready, 2 is number of arguments in fds
+            int ret = poll(fds,2,500);
+
+            if (ret<0) {
+                warnx("Error de loop");
+            } else if (ret==0) {
+                //Nothing has changed
+            } else {
+                //Only update parameters if they have changed
+                if (fds[0].revents & POLLIN ) {
+                    //ecrire l update dans parameter_update
+                    struct parameter_update_s update;
+                    orb_copy(ORB_ID(parameter_update), params_sub, &update);
+                    /* if a param update occured, re-read our parameters */
+                    parameters_update(&ph, &pp);
+                }
+                //Only change controller if attitude changed
+                if (fds[1].revents & POLLIN) {
+                    //Check what is new
+                    bool pos_updated;
+                    orb_check(global_pos_sub, &pos_updated);
+                    bool att_sp_updated;
+                    orb_check(att_sp_sub, &att_sp_updated);
+                    bool manual_sp_updated;
+                    orb_check(manual_sp_sub, &manual_sp_updated);
+                    bool dist_sensor_updated;
+                    orb_check(dist_sensor_sub, &dist_sensor_updated);
+                    //Get local copy of attitude
+                    orb_copy(ORB_ID(vehicle_attitude), att_sub, &att);
+
+                    //Copier le pos si il est change
+                    if (pos_updated) {
+                        orb_copy(ORB_ID(vehicle_global_position), global_pos_sub, &global_pos);
+                    }
+
+                    //Copier l'attitude sp si il est change
+                    if (att_sp_updated) {
+                        orb_copy(ORB_ID(vehicle_attitude_setpoint), att_sp_sub, &att_sp);
+                    }
+
+                    //Copier le manual sp si il est change
+                    if (manual_sp_updated){
+                        orb_copy(ORB_ID(manual_control_setpoint), manual_sp_sub, &manual_sp);
+                    }
+
+                    //Copier le distance sensor si il est changé
+                    if (dist_sensor_updated) {
+                        orb_copy(ORB_ID(distance_sensor), dist_sensor_sub, &dist_sensor);
+                    }
+
+                    //Appeler la fonction qui controle les actuators
+                    control_attitude(&pp, &manual_sp, &att, &actuators, &global_pos, last_run,
+                                     roll_spd_int, pitch_spd_int, roll_spd_filtree, pitch_spd_filtree, &dist_sensor, lift_int);
+
+                    //Get vehicule status
+                    orb_copy(ORB_ID(vehicle_status), vstatus_sub, &vstatus);
+
+                    //Sanity check then publish actuators outputs
+                    if (PX4_ISFINITE(actuators.control[0]) &&
+                        PX4_ISFINITE(actuators.control[1]) &&
+                        PX4_ISFINITE(actuators.control[2]) &&
+                        PX4_ISFINITE(actuators.control[3])) {
+                        orb_publish(ORB_ID(actuator_controls_0), actuator_pub, &actuators);
+                    }
+                    // J ai pas mis de verbose
+                }
+            }
+
+        }
+        warnx("Exiting, stopping all motors");
+        thread_running = false;
 
 //Kill all outputs
-    for (unsigned i = 0; i < (sizeof(actuators.control) / sizeof(actuators.control[0])); i++) {
-        actuators.control[i] = 0.0f;
+        for (unsigned i = 0; i < (sizeof(actuators.control) / sizeof(actuators.control[0])); i++) {
+            actuators.control[i] = 0.0f;
+        }
+
+        actuators.timestamp = hrt_absolute_time();
+
+        orb_publish(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, actuator_pub, &actuators);
+
+        return 0;
     }
-
-    actuators.timestamp = hrt_absolute_time();
-
-    orb_publish(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, actuator_pub, &actuators);
-
-    return 0;
-}
 
 //Startup functions
-int PRAO_main(int argc, char *argv[]) {
-    if (argc < 2) {
-        return 1;
-    }
-    if (!strcmp(argv[1], "start")) {
+    int PRAO_main(int argc, char *argv[]) {
+        if (argc < 2) {
+            return 1;
+        }
+        if (!strcmp(argv[1], "start")) {
 
-        if (thread_running) {
-            warnx("running");
+            if (thread_running) {
+                warnx("running");
+                return 0;
+            }
+            thread_should_exit = false;
+            deamon_task = px4_task_spawn_cmd("PRAOAttitudeControl",
+                                             SCHED_DEFAULT,
+                                             SCHED_PRIORITY_MAX - 20,
+                                             2048,
+                                             PRAO_thread_main,
+                                             (argv) ? (char *const *) &argv[2] : (char *const *) nullptr);
+            thread_running = true;
             return 0;
         }
-        thread_should_exit = false;
-        deamon_task = px4_task_spawn_cmd("PRAOAttitudeControl",
-                                         SCHED_DEFAULT,
-                                         SCHED_PRIORITY_MAX - 20,
-                                         2048,
-                                         PRAO_thread_main,
-                                         (argv) ? (char *const *) &argv[2] : (char *const *) nullptr);
-        thread_running = true;
-        return 0;
-    }
 
-    if (!strcmp(argv[1], "stop")) {
-        thread_should_exit = true;
-        return 0;
-    }
-
-    if (!strcmp(argv[1], "status")) {
-        if (thread_running) {
-            warnx("running");
-
-        } else {
-            warnx("not started");
+        if (!strcmp(argv[1], "stop")) {
+            thread_should_exit = true;
+            return 0;
         }
 
-        return 0;
+        if (!strcmp(argv[1], "status")) {
+            if (thread_running) {
+                warnx("running");
+
+            } else {
+                warnx("not started");
+            }
+
+            return 0;
+        }
+        return 1;
     }
-    return 1;
-}
 
 //////////END COMMENTS

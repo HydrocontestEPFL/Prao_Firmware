@@ -79,24 +79,6 @@ PARAM_DEFINE_FLOAT(PRAO_R_P,0.5f);
 PARAM_DEFINE_FLOAT(PRAO_R_I,0.5f);
 
 /**
- * Proportionnal gain of yaw controller
- *
- * @min 0.0
- * @max 100.0
- * @group PRAO Attitude Control
- */
-PARAM_DEFINE_FLOAT(PRAO_Y_P,0.5f);
-
-/**
- * Integral gain of yaw controller
- *
- * @min 0.0
- * @max 100.0
- * @group PRAO Attitude Control
- */
-PARAM_DEFINE_FLOAT(PRAO_Y_I,0.5f);
-
-/**
  * Pitch scaler
  *
  * @min 0.0
@@ -203,3 +185,58 @@ PARAM_DEFINE_FLOAT(PRAO_A_FILTER,10.0f);
  * @group PRAO Attitude Control
  */
 PARAM_DEFINE_FLOAT(PRAO_ALPHA_FILT,10.0f);
+
+/**
+ * Reverse mode to invert throttle command
+ *
+ * @min 0.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_REVERSE,1.0f);
+
+/**
+ * Proportionnal gain of lift controller
+ *
+ * @min 0.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_L_P,0.5f);
+
+/**
+* Integral gain of lift controller
+*
+* @min 0.0
+* @max 100.0
+* @group PRAO Attitude Control
+*/
+PARAM_DEFINE_FLOAT(PRAO_L_I,0.5f);
+
+/**
+ * Lift scaler
+ *
+ * @min 0.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_L_SCALER,0.5f);
+
+/**
+ * Lift integrator max
+ *
+ * @min 0.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_L_INT_MAX,10.0f);
+
+/**
+ * Wanted altitude of flight of the boat
+ *
+ * @min 0.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_ALTITUDE,10.0f);
+
