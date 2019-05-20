@@ -203,7 +203,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
     float pitch_scaler = para->pitch_scl / powf(speed_ctrl, 2);
     float lift_scaler = para->lift_scl / powf(speed_ctrl, 2);
 
-    if (para->reverse < 0.5f) {
+    if (para->reverse > 1.5f) {
         /** Si on est en mode reverse (marche arrière) on met un moins sur le throttle
          * manual_sp->z est defini sur 0..1 **/
         //On controle le roll avec la RC
