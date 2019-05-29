@@ -37,7 +37,7 @@ Two scalers total (output, pitch).
 The mixer is configure as a pass through.
 
 M: 1
-O:      10000  10000      0 -2000  3200
+O:      10000  10000      0 -3400  6000
 S: 0 1  10000  10000      0 -10000  10000
 
 
@@ -48,5 +48,5 @@ Two scalers total (output, roll).
 The mixer is configure as a pass through.
 
 M: 1
-O:      10000  10000      0 -2000  3200
+O:      10000  10000      0 -3400  6000
 S: 0 0  10000  10000      0 -10000  10000
