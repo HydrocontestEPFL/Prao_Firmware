@@ -207,7 +207,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         /** Si on est en mode reverse (marche arrière) on met un moins sur le throttle
          * manual_sp->z est defini sur 0..1 **/
         //On controle le roll avec la RC
-        actuators->control[0] = manual_sp->y;
+        actuators->control[0] = -manual_sp->y;
 
         //On controle le pitch avec la RC
         actuators->control[1] = manual_sp->x;
@@ -220,7 +220,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
     } else {
         if (para->mode > -0.5f && para->mode < 0.5f) {
             //On controle le roll avec la RC
-            actuators->control[0] = manual_sp->y;
+            actuators->control[0] = -manual_sp->y;
 
             //On controle le pitch avec la RC
             actuators->control[1] = manual_sp->x;
@@ -248,7 +248,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
             // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = roll_output;
+            actuators->control[0] = -roll_output;
 
 /**
         // Controle du pitch
@@ -322,7 +322,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
             // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = roll_output;
+            actuators->control[0] = -roll_output;
 
 /**
         // Controle du pitch
@@ -393,7 +393,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
             // Envoyer dans actuatoors ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = roll_output;
+            actuators->control[0] = -roll_output;
 
 
             // Controle du pitch
@@ -467,7 +467,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
             // Envoyer dans actuatoors ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = roll_output;
+            actuators->control[0] = -roll_output;
 
 /**
         // Controle du pitch
