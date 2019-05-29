@@ -48,5 +48,5 @@ Two scalers total (output, roll).
 The mixer is configure as a pass through.
 
 M: 1
-O:      10000  10000      0 -3400  6000
+O:      6000  6000      0 -2600  6200
 S: 0 0  10000  10000      0 -10000  10000
