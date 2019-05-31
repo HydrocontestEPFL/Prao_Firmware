@@ -232,7 +232,7 @@ PARAM_DEFINE_FLOAT(PRAO_L_SCALER,0.5f);
 PARAM_DEFINE_FLOAT(PRAO_L_INT_MAX,10.0f);
 
 /**
- * Wanted altitude of flight of the boat
+ * Desired altitude of flight of the boat
  *
  * @min 0.0
  * @max 100.0
@@ -240,3 +240,11 @@ PARAM_DEFINE_FLOAT(PRAO_L_INT_MAX,10.0f);
  */
 PARAM_DEFINE_FLOAT(PRAO_ALTITUDE,0.4f);
 
+/**
+ * Roll offset of flight of the boat
+ *
+ * @min -100.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_ROLL_SP,0.0f);

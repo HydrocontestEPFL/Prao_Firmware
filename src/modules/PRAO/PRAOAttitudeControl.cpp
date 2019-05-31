@@ -144,6 +144,7 @@ int parameters_init(struct _param_handles *h)
     h->lift_scl = param_find("PRAO_L_SCALER");
     h->lift_int_max = param_find("PRAO_L_INT_MAX");
     h->lift_setpoint = param_find("PRAO_ALTITUDE");
+    h->roll_setpoint = param_find("PRAO_ROLL_SP");
     return 0;
 }
 
@@ -172,6 +173,7 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
     param_get(h->lift_scl, &(p->lift_scl));
     param_get(h->lift_int_max, &(p->lift_int_max));
     param_get(h->lift_setpoint, &(p->lift_setpoint));
+    param_get(h->roll_setpoint, &(p->roll_setpoint));
     return 0;
 }
 
@@ -210,7 +212,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         actuators->control[0] = -manual_sp->y;
 
         //On controle le pitch avec la RC
-        actuators->control[1] = manual_sp->x;
+        actuators->control[1] = -manual_sp->x;
 
         //On controle le yaw avec la RC
         actuators->control[2] = manual_sp->r;
@@ -223,7 +225,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             actuators->control[0] = -manual_sp->y;
 
             //On controle le pitch avec la RC
-            actuators->control[1] =- manual_sp->x;
+            actuators->control[1] = -manual_sp->x;
 
             //On controle le yaw avec la RC
             actuators->control[2] = manual_sp->r;
@@ -234,7 +236,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             //Controle du roll
 
             //Trouver l'erreur en position
-            float roll_err = matrix::Eulerf(
+            float roll_err = para->roll_setpoint - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
 
             //Terme proportionnel
@@ -248,7 +250,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
             // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = roll_output;
+            actuators->control[0] = -roll_output;
 
 /**
         // Controle du pitch
@@ -298,9 +300,9 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             // Controle du roll
 
             // Trouver vitesse de roll
-            float roll_err = matrix::Eulerf(
+            float roll_err = para->roll_setpoint - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-            float roll_spd_sp_nonsat = -roll_err * (1 / para->roll_tc); // ya un moins du au feedback
+            float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc); // ya un moins du au feedback
 
             //Saturation de la consigne de vitesse de roll
             float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max);
@@ -322,7 +324,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
             // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = roll_output;
+            actuators->control[0] = -roll_output;
 
 /**
         // Controle du pitch
@@ -366,9 +368,9 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             // Controle du roll
 
             // Trouver vitesse de roll
-            float roll_err = matrix::Eulerf(
+            float roll_err = para->roll_setpoint - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-            float roll_spd_sp_nonsat = -roll_err * (1 / para->roll_tc); // ya un moins du au feedback
+            float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc); // ya un moins du au feedback
 
             //Saturation de la consigne de vitesse de roll
             float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max);
@@ -393,7 +395,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
             // Envoyer dans actuatoors ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = roll_output;
+            actuators->control[0] = -roll_output;
 
 
             // Controle du pitch
@@ -440,9 +442,9 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             // Controle du roll
 
             // Trouver vitesse de roll
-            float roll_err = matrix::Eulerf(
+            float roll_err = para->roll_setpoint - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-            float roll_spd_sp_nonsat = -roll_err * (1 / para->roll_tc); // ya un moins du au feedback
+            float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc); // ya un moins du au feedback
 
             //Saturation de la consigne de vitesse de roll
             float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max);
@@ -467,7 +469,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
             // Envoyer dans actuatoors ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = roll_output;
+            actuators->control[0] = -roll_output;
 
 /**
         // Controle du pitch

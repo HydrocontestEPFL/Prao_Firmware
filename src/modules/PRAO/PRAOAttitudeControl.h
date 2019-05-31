@@ -91,6 +91,7 @@ struct _params {
     float lift_scl;
     float lift_int_max;
     float lift_setpoint;
+    float roll_setpoint;
 };
 
 //Initialise la structure des handles de param
@@ -117,4 +118,5 @@ struct _param_handles {
     param_t lift_scl;
     param_t lift_int_max;
     param_t lift_setpoint;
+    param_t roll_setpoint;
 };
