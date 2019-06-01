@@ -356,7 +356,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
 
             //On controle le pitch avec la RC
-            actuators->control[1] = manual_sp->x;
+            actuators->control[1] =- manual_sp->x;
 
             //le z et y sont tires de manual_control_setpoint.msg
             //On controle le yaw avec la RC
@@ -438,7 +438,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
             //On controle le throttle avec la RC
             actuators->control[3] = manual_sp->z;
-        } else {
+        } else if (para->mode > 3.5f && para->mode < 4.5f)  {
             // Controle du roll
 
             // Trouver vitesse de roll
@@ -503,24 +503,57 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         actuators->control[1]= pitch_output; **/
 
 
-            // Controle du lift
+            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
+            actuators->control[1] =- manual_sp->x;
 
-            // Trouver l'erreur en position
-            float lift_err = para->lift_setpoint - dist_sensor->current_distance;
+
+            //le z et y sont tires de manual_control_setpoint.msg
+            //On controle le yaw avec la RC
+            actuators->control[2] = manual_sp->r;
+
+            //On controle le throttle avec la RC
+            actuators->control[3] = manual_sp->z;
+        } else {
+            //Controle du roll
+
+            //Trouver l'erreur en position
+            float roll_err = para->roll_setpoint - matrix::Eulerf(
+                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
 
             //Terme proportionnel
-            float lift_prop = lift_err * para->lift_p;
+            float roll_spd_prop = roll_err * para->roll_p;
 
             //Terme integrateur
-            lift_int = math::constrain(lift_int + lift_err * dt * para->lift_i, -para->lift_int_max,
-                                       para->lift_int_max);
+            roll_spd_int = math::constrain(roll_spd_int + roll_err * dt * para->roll_i, -para->roll_int_max,
+                                           para->roll_int_max);
 
             // Addition des termes
-            float lift_output = lift_scaler * (lift_prop + lift_int);
+            float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
             // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[1] = -lift_output;
+            actuators->control[0] = -roll_output;
 
+/**
+        // Controle du pitch
+
+        // Trouver l'erreur en position
+        float pitch_err = matrix::Eulerf(matrix::Quatf(att->q)).theta(); //att est le nom de la struct qui gere vehicule_attitude
+
+        //Terme proportionnel
+        float pitch_spd_prop = pitch_err * para->pitch_p;
+
+        //Terme integrateur
+        pitch_spd_int = math::constrain(pitch_spd_int + pitch_err*dt*para->pitch_i, - para->pitch_int_max, para->pitch_int_max);
+
+        // Addition des termes
+        float pitch_output = pitch_scaler * (pitch_spd_prop + pitch_spd_int);
+
+        // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
+        actuators->control[1]= pitch_output; **/
+
+
+            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
+            actuators->control[1] =- manual_sp->x;
 
             //le z et y sont tires de manual_control_setpoint.msg
             //On controle le yaw avec la RC
