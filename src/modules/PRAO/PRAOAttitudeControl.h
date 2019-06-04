@@ -92,6 +92,11 @@ struct _params {
     float lift_int_max;
     float lift_setpoint;
     float roll_setpoint;
+    float speed_takeoff_init;
+    float speed_takeoff_final;
+    float tol_takeoff;
+    float scaler_takeoff_roll;
+    float coeff_takeoff;
 };
 
 //Initialise la structure des handles de param
@@ -119,4 +124,9 @@ struct _param_handles {
     param_t lift_int_max;
     param_t lift_setpoint;
     param_t roll_setpoint;
+    param_t speed_takeoff_init;
+    param_t speed_takeoff_final;
+    param_t tol_takeoff;
+    param_t scaler_takeoff_roll;
+    param_t coeff_takeoff;
 };

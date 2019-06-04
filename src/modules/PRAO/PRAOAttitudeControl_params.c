@@ -106,7 +106,7 @@ PARAM_DEFINE_FLOAT(PRAO_R_SCALER,0.5f);
 PARAM_DEFINE_FLOAT(PRAO_MODE,0.0f);
 
 /**
- * Roll time constant
+ * Roll time constant (s)
  *
  * @min 0.0
  * @max 100.0
@@ -115,7 +115,7 @@ PARAM_DEFINE_FLOAT(PRAO_MODE,0.0f);
 PARAM_DEFINE_FLOAT(PRAO_R_TC,1.0f);
 
 /**
- * Pitch time constant
+ * Pitch time constant (s)
  *
  * @min 0.0
  * @max 100.0
@@ -142,7 +142,7 @@ PARAM_DEFINE_FLOAT(PRAO_R_INT_MAX,10.0f);
 PARAM_DEFINE_FLOAT(PRAO_P_INT_MAX,10.0f);
 
 /**
- * Roll speed max
+ * Roll speed max (rad/s)
  *
  * @min 0.0
  * @max 100.0
@@ -151,7 +151,7 @@ PARAM_DEFINE_FLOAT(PRAO_P_INT_MAX,10.0f);
 PARAM_DEFINE_FLOAT(PRAO_R_SPD_MAX,10.0f);
 
 /**
- * Pitch speed max
+ * Pitch speed max (rad/s)
  *
  * @min 0.0
  * @max 100.0
@@ -232,7 +232,7 @@ PARAM_DEFINE_FLOAT(PRAO_L_SCALER,0.5f);
 PARAM_DEFINE_FLOAT(PRAO_L_INT_MAX,10.0f);
 
 /**
- * Desired altitude of flight of the boat
+ * Desired altitude of flight of the boat (m)
  *
  * @min 0.0
  * @max 100.0
@@ -248,3 +248,48 @@ PARAM_DEFINE_FLOAT(PRAO_ALTITUDE,0.4f);
  * @group PRAO Attitude Control
  */
 PARAM_DEFINE_FLOAT(PRAO_ROLL_SP,0.0f);
+
+/**
+ * Speed at which the PRAO begins take off procedure if desired altitude is not yet reached (m/s)
+ *
+ * @min -100.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_TO_SPD_IN,2.0f);
+
+/**
+ * Speed at which the PRAO finishes take off procedure even if desired altitude is not yet reached (m/s)
+ *
+ * @min -100.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_TO_SPD_FN,4.0f);
+
+/**
+ * Acceptable altitude tolerance under which takeoff procedure finishes even if speed is still too low (m)
+ *
+ * @min -100.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_TO_TOL,0.1f);
+
+/**
+ * Ponderation coefficient for the command sent to the small foil during takeoff (1 means no roll control, 0 means no altitude control)
+ *
+ * @min -100.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_TO_SCL_R,0.1f);
+
+/**
+ * Coefficient for scaling takeoff actuation (to be at full actuation at some point during takeoff, > 1)
+ *
+ * @min -100.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_TO_COEFF,2.0f);
