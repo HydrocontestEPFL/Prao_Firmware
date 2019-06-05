@@ -858,10 +858,10 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
                 // foil flotteur prend la meme info que le foil principal + le gauche/droite de la RC (pondere par param PRAO_TO_SCL_R)
 
                 // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[0] = -manual_sp->y;
+                actuators->control[0] = para->scaler_takeoff_roll * manual_sp->x - (1.0f - para->scaler_takeoff_roll) * manual_sp->y;
 
                 // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[1] = para->scaler_takeoff_roll * manual_sp->y - (1.0f - para->scaler_takeoff_roll) * manual_sp->x;
+                actuators->control[1] = -manual_sp->x;
 
                 //On controle le yaw avec la RC
                 actuators->control[2] = manual_sp->r;
