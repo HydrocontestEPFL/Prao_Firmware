@@ -56,11 +56,8 @@
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/distance_sensor.h>
 
-// Modif Fab
 #include <stdio.h>
 #include <mathlib/mathlib.h>
-//#include <ecl.h>
-//Fin modif Fab
 
 using matrix::Eulerf;
 using matrix::Quatf;

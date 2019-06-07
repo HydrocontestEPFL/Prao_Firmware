@@ -73,10 +73,6 @@
  */
 extern "C" int parameters_init(struct param_handles *h);
 
-/**
- * Update all parameters
- *
- */
 extern "C" int parameters_update(const struct param_handles *h, struct params *p);
 
 /**
@@ -95,6 +91,10 @@ extern "C" __EXPORT int PRAO_main(int argc, char *argv[]);
  */
 int PRAO_thread_main(int argc, char *argv[]);
 
+/**
+ * Update all parameters
+ *
+ */
 int parameters_init(struct param_handles *h);
 
 /**
@@ -309,7 +309,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             // Trouver vitesse de roll
             float roll_err = para->roll_setpoint - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-            float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc); // ya un moins du au feedback
+            float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc);
 
             //Saturation de la consigne de vitesse de roll
             float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max);
@@ -357,13 +357,13 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             // Trouver vitesse de roll
             float roll_err = para->roll_setpoint - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-            float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc); // ya un moins du au feedback
+            float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc);
 
             //Saturation de la consigne de vitesse de roll
             float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max);
 
             //Filtrer la vitesse de roll
-            roll_spd_filtree = (para->k_filter * dt * att->rollspeed + roll_spd_filtree) / (para->a_filter * dt + 1.0f);
+            roll_spd_filtree = (para->k_filter * para->a_filter * dt * att->rollspeed + roll_spd_filtree) / (para->a_filter * dt + 1.0f);
 
             //Saturation de la vitesse de roll (filtrage des vibrations)
             float roll_spd_final = math::constrain(roll_spd_filtree, -para->roll_spd_max, para->roll_spd_max);
@@ -390,7 +390,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             // Trouver vitesse de pitch
             float pitch_err = matrix::Eulerf(
                     matrix::Quatf(att->q)).theta(); //att est le nom de la struct qui gere vehicule_attitude
-            float pitch_spd_sp_nonsat = -pitch_err * (1 / para->pitch_tc); // ya un moins du au feedback
+            float pitch_spd_sp_nonsat = -pitch_err * (1 / para->pitch_tc);
 
             //Saturation de la consigne de vitesse de pitch
             float pitch_spd_sp = math::constrain(pitch_spd_sp_nonsat, -para->pitch_spd_max, para->pitch_spd_max);
@@ -438,7 +438,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             // Trouver vitesse de roll
             float roll_err = para->roll_setpoint - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-            float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc); // ya un moins du au feedback
+            float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc);
 
             //Saturation de la consigne de vitesse de roll
             float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max);
@@ -722,7 +722,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             // Trouver vitesse de roll
             float roll_err = para->roll_setpoint - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-            float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc); // ya un moins du au feedback
+            float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc);
 
             //Saturation de la consigne de vitesse de roll
             float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max);
@@ -909,8 +909,6 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         memset(&global_sp, 0, sizeof(global_sp));
         struct distance_sensor_s dist_sensor;
         memset (&dist_sensor, 0, sizeof(dist_sensor));
-        //struct airspeed_s airspd;
-        //memset(&airspd, 0, sizeof(airspd));
 
         // Initialisation des output structures
         struct actuator_controls_s actuators;
@@ -927,7 +925,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         orb_advert_t actuator_pub = orb_advertise(ORB_ID(actuator_controls_0), &actuators);
 
 
-        //Faire toutes les subscriptions ( peut etre besoin de mettre un int devant )
+        //Faire toutes les subscriptions
         // Maybe limiter l'update rate avec orb_set_interval (voir dans exemples/uuv_exemple)
         int att_sub = orb_subscribe(ORB_ID(vehicle_attitude));
         int att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
