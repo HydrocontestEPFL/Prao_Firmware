@@ -293,3 +293,12 @@ PARAM_DEFINE_FLOAT(PRAO_TO_SCL_R,0.1f);
  * @group PRAO Attitude Control
  */
 PARAM_DEFINE_FLOAT(PRAO_TO_COEFF,2.0f);
+
+/**
+ * Ponderation coefficient for the command sent to all servos between RC and auto control (0 means RC control, 1 normal control)
+ *
+ * @min -100.0
+ * @max 100.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_TO_RC,0.7f);

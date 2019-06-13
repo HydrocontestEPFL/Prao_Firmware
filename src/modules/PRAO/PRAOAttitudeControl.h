@@ -94,6 +94,7 @@ struct _params {
     float tol_takeoff;
     float scaler_takeoff_roll;
     float coeff_takeoff;
+    float coeff_RC;
 };
 
 //Initialise la structure des handles de param
@@ -126,4 +127,5 @@ struct _param_handles {
     param_t tol_takeoff;
     param_t scaler_takeoff_roll;
     param_t coeff_takeoff;
+    param_t coeff_RC;
 };

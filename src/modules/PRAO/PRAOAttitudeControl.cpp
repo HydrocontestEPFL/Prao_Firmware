@@ -150,6 +150,7 @@ int parameters_init(struct _param_handles *h)
     h->tol_takeoff = param_find("PRAO_TO_TOL");
     h->scaler_takeoff_roll = param_find("PRAO_TO_SCL_R");
     h->coeff_takeoff = param_find("PRAO_TO_COEFF");
+    h->coeff_RC = param_find("PRAO_TO_RC");
     return 0;
 }
 
@@ -184,6 +185,7 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
     param_get(h->tol_takeoff, &(p->tol_takeoff));
     param_get(h->scaler_takeoff_roll, &(p->scaler_takeoff_roll));
     param_get(h->coeff_takeoff, &(p->coeff_takeoff));
+    param_get(h->coeff_RC, &(p->coeff_RC));
     return 0;
 }
 
@@ -231,6 +233,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         //On controle le throttle avec la RC
         actuators->control[3] = -manual_sp->z;
     } else {
+
         if (para->mode > -0.5f && para->mode < 0.5f) {
             /** Mode 0 : MANUEL **/
 
@@ -249,9 +252,12 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         } else if (para->mode > 0.5f && para->mode < 1.5f) {
             /** Mode 1 :
              * AUTO Controle ROLL sur la position PI, sans SAT, sans FILTRE
+             * avec pondération à la RC
              *
              * AUTO Controle LIFT (altitude) sur la position de lift PI (publié sur channel pitch)
-             * sans SAT, sans FILTRE**/
+             * sans SAT, sans FILTRE
+             * avec pondération à la RC
+             * **/
 
             //Controle du roll
 
@@ -270,7 +276,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
             // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = -roll_output;
+            actuators->control[0] = -(para->coeff_RC * roll_output+ (1.0f-para->coeff_RC)*manual_sp->y);
 
             // Controle du lift
 
@@ -288,7 +294,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             float lift_output = lift_scaler * (lift_prop + lift_int);
 
             // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[1] = -lift_output;
+            actuators->control[1] = -(para->coeff_RC * lift_output+ (1.0f-para->coeff_RC)*manual_sp->x);
 
 
             //le z et y sont tires de manual_control_setpoint.msg
@@ -301,8 +307,11 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         } else if (para->mode > 1.5f && para->mode < 2.5f) {
             /** Mode 2 :
              * AUTO Controle ROLL sur la vitesse PI, avec SAT, sans FILTRE
+             * avec pondération à la RC
              *
-             * MANUAL LIFT (pitch) **/
+             *
+             * MANUAL LIFT (pitch)
+             * **/
 
             // Controle du roll
 
@@ -331,7 +340,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
             // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = -roll_output;
+            actuators->control[0] = -(para->coeff_RC * roll_output+ (1.0f-para->coeff_RC)*manual_sp->y);
 
             //On controle le pitch avec la RC
             actuators->control[1] =- manual_sp->x;
@@ -347,9 +356,12 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             /** Mode 3 :
              * AUTO Controle ROLL sur la vitesse PI,
              * avec SAT, avec FILTRE PASSE BAS 1 avant SAT
+             * avec ponderation à la RC
              *
              * AUTO Controle PITCH sur la vitesse PI,
-             * avec SAT, avec FILTRE PASSE BAS 1 avant SAT **/
+             * avec SAT, avec FILTRE PASSE BAS 1 avant SAT
+             * avec ponderation à la RC
+             * **/
 
 
             // Controle du roll
@@ -382,8 +394,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
             // Envoyer dans actuatoors ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = -roll_output;
-
+            actuators->control[0] = -(para->coeff_RC * roll_output+ (1.0f-para->coeff_RC)*manual_sp->y);
 
             // Controle du pitch
 
@@ -416,7 +427,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             float pitch_output = pitch_scaler * (pitch_spd_prop + pitch_spd_int);
 
             // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[1] = -pitch_output;
+            actuators->control[1] = -(para->coeff_RC * pitch_output+ (1.0f-para->coeff_RC)*manual_sp->x);
 
 
             //le z et y sont tires de manual_control_setpoint.msg
@@ -425,13 +436,19 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
             //On controle le throttle avec la RC
             actuators->control[3] = manual_sp->z;
+
+
         } else if (para->mode > 3.5f && para->mode < 4.5f)  {
             /** Mode 4 :
              * AUTO Controle ROLL sur la vitesse PI,
              * avec SAT, avec FILTRE PASSE BAS 2 avant SAT
+             * avec pondération à la RC
              *
              * AUTO Controle LIFT (altitude) sur la position de lift PI (publié sur channel pitch),
-             * sans SAT, sans FILTRE **/
+             * sans SAT, sans FILTRE *
+             * avec pondération à la RC
+             *
+             * */
 
             // Controle du roll
 
@@ -463,7 +480,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
             // Envoyer dans actuatoors ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = -roll_output;
+            actuators->control[0] = -(para->coeff_RC * roll_output+ (1.0f-para->coeff_RC)*manual_sp->y);
 
             // Controle du lift
 
@@ -481,7 +498,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             float lift_output = lift_scaler * (lift_prop + lift_int);
 
             // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[1] = -lift_output;
+            actuators->control[1] = -(para->coeff_RC * lift_output+ (1.0f-para->coeff_RC)*manual_sp->x);
 
 
             //le z et y sont tires de manual_control_setpoint.msg
@@ -493,6 +510,8 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         } else if (para->mode > 4.5f && para->mode < 5.5f)  {
             /** Mode 5 :
              * AUTO Controle ROLL sur la position PI, avec SAT, sans FILTRE
+             * pondération avec la RC
+             *
              *
              * MANUAL LIFT (pitch) **/
 
@@ -513,7 +532,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
             // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = -roll_output;
+            actuators->control[0] = -(para->coeff_RC * roll_output+ (1.0f-para->coeff_RC)*manual_sp->y);
 
             // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
             actuators->control[1] = -manual_sp->x;
