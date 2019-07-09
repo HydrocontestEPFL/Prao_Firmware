@@ -196,6 +196,8 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
                       float roll_spd_int, float pitch_spd_int, float roll_spd_filtree, float pitch_spd_filtree,
                       const  distance_sensor_s *dist_sensor, float lift_int) {
 
+    float prec_st = 0.001;
+
     // Calcul de la vitesse
     float speed = sqrt(pow(global_pos->vel_n, 2) + pow(global_pos->vel_e, 2));
 
@@ -228,7 +230,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         actuators->control[1] = -manual_sp->x;
 
         //On controle le yaw avec la RC
-        actuators->control[2] = manual_sp->r;
+            actuators->control[2] = manual_sp->r;
 
         //On controle le throttle avec la RC
         actuators->control[3] = -manual_sp->z;
@@ -262,7 +264,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             //Controle du roll
 
             //Trouver l'erreur en position
-            float roll_err = para->roll_setpoint - matrix::Eulerf(
+            float roll_err = para->roll_setpoint*prec_st - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
 
             //Terme proportionnel
@@ -316,7 +318,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             // Controle du roll
 
             // Trouver vitesse de roll
-            float roll_err = para->roll_setpoint - matrix::Eulerf(
+            float roll_err = para->roll_setpoint*prec_st - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
             float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc);
 
@@ -367,7 +369,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             // Controle du roll
 
             // Trouver vitesse de roll
-            float roll_err = para->roll_setpoint - matrix::Eulerf(
+            float roll_err = para->roll_setpoint*prec_st - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
             float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc);
 
@@ -453,7 +455,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             // Controle du roll
 
             // Trouver vitesse de roll
-            float roll_err = para->roll_setpoint - matrix::Eulerf(
+            float roll_err = para->roll_setpoint*prec_st - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
             float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc);
 
@@ -518,7 +520,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             //Controle du roll
 
             //Trouver l'erreur en position
-            float roll_err = para->roll_setpoint - matrix::Eulerf(
+            float roll_err = para->roll_setpoint*prec_st - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
 
             //Terme proportionnel
@@ -558,7 +560,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             //Controle du roll
 
             //Trouver l'erreur en position
-            float roll_err = para->roll_setpoint - matrix::Eulerf(
+            float roll_err = para->roll_setpoint*prec_st - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
 
             //Terme proportionnel
@@ -644,7 +646,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             //Controle du roll
 
             //Trouver l'erreur en position
-            float roll_err = para->roll_setpoint - matrix::Eulerf(
+            float roll_err = para->roll_setpoint*prec_st - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
 
             //Terme proportionnel
@@ -739,7 +741,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             // Controle du roll
 
             // Trouver vitesse de roll
-            float roll_err = para->roll_setpoint - matrix::Eulerf(
+            float roll_err = para->roll_setpoint*prec_st - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
             float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc);
 
@@ -843,7 +845,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             //Controle du roll
 
             //Trouver l'erreur en position
-            float roll_err = para->roll_setpoint - matrix::Eulerf(
+            float roll_err = para->roll_setpoint*prec_st - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
 
             //Terme proportionnel

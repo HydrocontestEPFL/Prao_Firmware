@@ -241,13 +241,13 @@ PARAM_DEFINE_FLOAT(PRAO_L_INT_MAX,10.0f);
 PARAM_DEFINE_FLOAT(PRAO_ALTITUDE,0.4f);
 
 /**
- * Roll offset of flight of the boat
+ * Roll offset of flight of the boat x1000
  *
- * @min -100.0
- * @max 100.0
+ * @min -10000
+ * @max 1000.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_ROLL_SP,0.0f);
+PARAM_DEFINE_FLOAT(PRAO_ROLL_SP,-50.0f);
 
 /**
  * Speed at which the PRAO begins take off procedure if desired altitude is not yet reached (m/s)
