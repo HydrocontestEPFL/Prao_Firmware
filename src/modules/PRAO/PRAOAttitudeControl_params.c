@@ -67,7 +67,7 @@ PARAM_DEFINE_FLOAT(PRAO_P_I,0.5f);
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_R_P,0.5f);
+PARAM_DEFINE_FLOAT(PRAO_R_P,60f);
 
 /**
  * Integral gain of roll controller
@@ -139,7 +139,7 @@ PARAM_DEFINE_FLOAT(PRAO_R_INT_MAX,10.0f);
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_P_INT_MAX,10.0f);
+PARAM_DEFINE_FLOAT(PRAO_P_INT_MAX,1f);
 
 /**
  * Roll speed max (rad/s)
@@ -202,7 +202,7 @@ PARAM_DEFINE_FLOAT(PRAO_REVERSE,1.0f);
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_L_P,0.5f);
+PARAM_DEFINE_FLOAT(PRAO_L_P,20f);
 
 /**
 * Integral gain of lift controller
@@ -238,7 +238,7 @@ PARAM_DEFINE_FLOAT(PRAO_L_INT_MAX,10.0f);
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_ALTITUDE,0.4f);
+PARAM_DEFINE_FLOAT(PRAO_ALTITUDE,0.2f);
 
 /**
  * Roll offset of flight of the boat x1000

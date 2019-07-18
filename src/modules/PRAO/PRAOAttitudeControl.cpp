@@ -997,7 +997,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
             //Changer si la taille du palpeur change l=0.85m
 
-            float lift_err = 0.85f * 0.5f * (manual_sp->x - 1.0f) - dist_sensor->current_distance;
+            float lift_err =  0.5f * (manual_sp->x + 0.8f) - dist_sensor->current_distance;
 
             //Terme proportionnel
             float lift_prop = lift_err * para->lift_p;
