@@ -1,7 +1,3 @@
-//
-// Created by Johan on 01.03.2019.
-//
-
 /****************************************************************************
  *
  *   Copyright (c) 2013-2017 PX4 Development Team. All rights reserved.
@@ -34,6 +30,15 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
+
+/**
+ * @file PRAOAttitudeControl.cpp
+ * PRAO Attitude Controller
+ *
+ * @author Johan Poccard <johan.poccard-saudart@epfl.ch>
+ * @author Fabien Benoist <f.benoist@epfl.ch>
+ * @author Guillaume Rozand <guillaume.rozand@epfl.ch>
+ */
 
 #include "PRAOAttitudeControl.h"
 
@@ -109,8 +114,8 @@ int parameters_update(const struct param_handles *h, struct params *p);
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
                       const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
                       const struct vehicle_global_position_s *global_pos, uint64_t last_run,
-                      float roll_spd_int, float pitch_spd_int, float roll_spd_filtree, float pitch_spd_filtree,
-                      const struct distance_sensor_s *dist_sensor, float lift_int);
+                      float roll_spd_int, float roll_spd_filtree, const distance_sensor_s *dist_sensor,
+                      float lift_int);
 
 //Definit certaines variables
 static bool thread_should_exit = false;		/**< Daemon exit flag */
@@ -122,35 +127,22 @@ static struct _param_handles ph; // ph est le nom de la structure qui gere le pa
 //Fonction d'initialisation des parametres
 int parameters_init(struct _param_handles *h)
 {
-    h->roll_p   =   param_find("PRAO_R_P");
-    h->roll_i   =   param_find("PRAO_R_I");
-    h->pitch_p  =   param_find("PRAO_P_P");
-    h->pitch_i  =   param_find("PRAO_P_I");
-    h->pitch_scl    =   param_find("PRAO_P_SCALER");
-    h->roll_scl    =   param_find("PRAO_R_SCALER");
-    h->mode    =   param_find("PRAO_MODE");
-    h->roll_tc  =   param_find("PRAO_R_TC");
-    h->pitch_tc  =   param_find("PRAO_P_TC");
-    h->roll_int_max  =   param_find("PRAO_R_INT_MAX");
-    h->pitch_int_max  =   param_find("PRAO_P_INT_MAX");
-    h->roll_spd_max  =   param_find("PRAO_R_SPD_MAX");
-    h->pitch_spd_max  =   param_find("PRAO_P_SPD_MAX");
-    h->k_filter  =  param_find("PRAO_K_FILTER");
-    h->a_filter  =  param_find("PRAO_A_FILTER");
-    h->alpha_filter  = param_find("PRAO_ALPHA_FILT");
-    h->reverse = param_find("PRAO_REVERSE");
-    h->lift_p = param_find("PRAO_L_P");
-    h->lift_i = param_find("PRAO_L_I");
-    h->lift_scl = param_find("PRAO_L_SCALER");
-    h->lift_int_max = param_find("PRAO_L_INT_MAX");
-    h->lift_setpoint = param_find("PRAO_ALTITUDE");
-    h->roll_setpoint = param_find("PRAO_ROLL_SP");
-    h->speed_takeoff_init = param_find("PRAO_TO_SPD_IN");
-    h->speed_takeoff_final = param_find("PRAO_TO_SPD_FN");
-    h->tol_takeoff = param_find("PRAO_TO_TOL");
-    h->scaler_takeoff_roll = param_find("PRAO_TO_SCL_R");
-    h->coeff_takeoff = param_find("PRAO_TO_COEFF");
-    h->coeff_RC = param_find("PRAO_TO_RC");
+    h->roll_p       =   param_find("PRAO_R_P");
+    h->roll_i       =   param_find("PRAO_R_I");
+    h->roll_scl     =   param_find("PRAO_R_SCALER");
+    h->roll_tc      =   param_find("PRAO_R_TC");
+    h->roll_spd_max =   param_find("PRAO_R_SPD_MAX");
+    h->roll_int_max =   param_find("PRAO_R_INT_MAX");
+    h->lift_p       =   param_find("PRAO_L_P");
+    h->lift_i       =   param_find("PRAO_L_I");
+    h->lift_scl     =   param_find("PRAO_L_SCALER");
+    h->lift_int_max =   param_find("PRAO_L_INT_MAX");
+    h->k_filter     =   param_find("PRAO_K_FILTER");
+    h->a_filter     =   param_find("PRAO_A_FILTER");
+    h->alpha_filter =   param_find("PRAO_ALPHA_FILT");
+    h->filter       =   param_find("PRAO_FILTER");
+    h->sat          =   param_find("PRAO_SAT");
+    h->spd_or_pos   =   param_find("PRAO_SPD_OR_POS");
     return 0;
 }
 
@@ -159,33 +151,20 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
 {
     param_get(h->roll_p, &(p->roll_p));
     param_get(h->roll_i, &(p->roll_i));
-    param_get(h->pitch_p, &(p->pitch_p));
-    param_get(h->pitch_i, &(p->pitch_i));
-    param_get(h->pitch_scl, &(p->pitch_scl));
     param_get(h->roll_scl, &(p->roll_scl));
-    param_get(h->mode, &(p->mode));
     param_get(h->roll_tc, &(p->roll_tc));
-    param_get(h->pitch_tc, &(p->pitch_tc));
-    param_get(h->roll_int_max, &(p->roll_int_max));
-    param_get(h->pitch_int_max, &(p->pitch_int_max));
     param_get(h->roll_spd_max, &(p->roll_spd_max));
-    param_get(h->pitch_spd_max, &(p->pitch_spd_max));
-    param_get(h->k_filter, &(p->k_filter));
-    param_get(h->a_filter, &(p->a_filter));
-    param_get(h->alpha_filter, &(p->alpha_filter));
-    param_get(h->reverse, &(p->reverse));
+    param_get(h->roll_int_max, &(p->roll_int_max));
     param_get(h->lift_p, &(p->lift_p));
     param_get(h->lift_i, &(p->lift_i));
     param_get(h->lift_scl, &(p->lift_scl));
     param_get(h->lift_int_max, &(p->lift_int_max));
-    param_get(h->lift_setpoint, &(p->lift_setpoint));
-    param_get(h->roll_setpoint, &(p->roll_setpoint));
-    param_get(h->speed_takeoff_init, &(p->speed_takeoff_init));
-    param_get(h->speed_takeoff_final, &(p->speed_takeoff_final));
-    param_get(h->tol_takeoff, &(p->tol_takeoff));
-    param_get(h->scaler_takeoff_roll, &(p->scaler_takeoff_roll));
-    param_get(h->coeff_takeoff, &(p->coeff_takeoff));
-    param_get(h->coeff_RC, &(p->coeff_RC));
+    param_get(h->k_filter, &(p->k_filter));
+    param_get(h->a_filter, &(p->a_filter));
+    param_get(h->alpha_filter, &(p->alpha_filter));
+    param_get(h->filter, &(p->filter));
+    param_get(h->sat, &(p->sat));
+    param_get(h->spd_or_pos, &(p->spd_or_pos));
     return 0;
 }
 
@@ -193,10 +172,9 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
 void control_attitude(struct _params *para, const struct manual_control_setpoint_s *manual_sp,
                       const struct vehicle_attitude_s *att, struct actuator_controls_s *actuators,
                       const struct vehicle_global_position_s *global_pos, uint64_t last_run,
-                      float roll_spd_int, float pitch_spd_int, float roll_spd_filtree, float pitch_spd_filtree,
-                      const  distance_sensor_s *dist_sensor, float lift_int) {
+                      float roll_spd_int, float roll_spd_filtree, const distance_sensor_s *dist_sensor,
+                      float lift_int) {
 
-    float prec_st = 0.001;
 
     // Calcul de la vitesse
     float speed = sqrt(pow(global_pos->vel_n, 2) + pow(global_pos->vel_e, 2));
@@ -216,704 +194,44 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
     //Faire les scalers
     float roll_scaler = para->roll_scl / powf(speed_ctrl, 2);
-    float pitch_scaler = para->pitch_scl / powf(speed_ctrl, 2);
     float lift_scaler = para->lift_scl / powf(speed_ctrl, 2);
 
-    if (para->reverse > 1.5f) {
+    if (manual_sp->aux2 > 0.0f) {
         /** Mode REVERSE : Si on est en mode reverse (marche arrière)
          * on met un moins sur le throttle car manual_sp->z est defini sur 0..1 **/
 
-        //On controle le roll avec la RC
+        /** Envoie dans actuators (les numeros de channel sont tires de actuator_controls) **/
+        // control[0] -> roll
+        // control[1] -> lift (pitch)
+        // control[2] -> yaw
+        // control[3] -> throttle
+        // NE CORRESPOND PAS AU BRANCHEMENT SUR LE PIXHAWK (voir ordre dans le mixer pour cela)
         actuators->control[0] = -manual_sp->y;
-
-        //On controle le pitch avec la RC
         actuators->control[1] = -manual_sp->x;
-
-        //On controle le yaw avec la RC
-            actuators->control[2] = manual_sp->r;
-
-        //On controle le throttle avec la RC
+        actuators->control[2] = manual_sp->r;
         actuators->control[3] = -manual_sp->z;
+
     } else {
 
-        if (para->mode > -0.5f && para->mode < 0.5f) {
+        if (manual_sp->aux1 < -0.5f) {
             /** Mode 0 : MANUEL **/
 
-            //On controle le roll avec la RC
+            /** Envoie dans actuators (les numeros de channel sont tires de actuator_controls) **/
+            // control[0] -> roll
+            // control[1] -> lift (pitch)
+            // control[2] -> yaw
+            // control[3] -> throttle
+            // NE CORRESPOND PAS AU BRANCHEMENT SUR LE PIXHAWK (voir ordre dans le mixer pour cela)
             actuators->control[0] = -manual_sp->y;
-
-            //On controle le pitch avec la RC
             actuators->control[1] = -manual_sp->x;
-
-            //On controle le yaw avec la RC
             actuators->control[2] = manual_sp->r;
-
-            //On controle le throttle avec la RC
             actuators->control[3] = manual_sp->z;
 
-        } else if (para->mode > 0.5f && para->mode < 1.5f) {
-            /** Mode 1 :
-             * AUTO Controle ROLL sur la position PI, sans SAT, sans FILTRE
-             * avec pondération à la RC
-             *
-             * AUTO Controle LIFT (altitude) sur la position de lift PI (publié sur channel pitch)
-             * sans SAT, sans FILTRE
-             * avec pondération à la RC
-             * **/
-
-            //Controle du roll
-
-            //Trouver l'erreur en position
-            float roll_err = para->roll_setpoint * prec_st - matrix::Eulerf(
-                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-
-            //Terme proportionnel
-            float roll_spd_prop = roll_err * para->roll_p;
-
-            //Terme integrateur
-            roll_spd_int = math::constrain(roll_spd_int + roll_err * dt * para->roll_i, -para->roll_int_max,
-                                           para->roll_int_max);
-
-            // Addition des termes
-            float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
-
-            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = -(para->coeff_RC * roll_output + (1.0f - para->coeff_RC) * manual_sp->y);
-
-            // Controle du lift
-
-            // Trouver l'erreur en position
-            float lift_err = para->lift_setpoint - dist_sensor->current_distance;
-
-            //Terme proportionnel
-            float lift_prop = lift_err * para->lift_p;
-
-            //Terme integrateur
-            lift_int = math::constrain(lift_int + lift_err * dt * para->lift_i, -para->lift_int_max,
-                                       para->lift_int_max);
-
-            // Addition des termes
-            float lift_output = lift_scaler * (lift_prop + lift_int);
-
-            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[1] = -(para->coeff_RC * lift_output + (1.0f - para->coeff_RC) * manual_sp->x);
-
-
-            //le z et y sont tires de manual_control_setpoint.msg
-            //On controle le yaw avec la RC
-            actuators->control[2] = manual_sp->r;
-
-            //On controle le throttle avec la RC
-            actuators->control[3] = manual_sp->z;
-
-        } else if (para->mode > 1.5f && para->mode < 2.5f) {
-            /** Mode 2 :
-             * AUTO Controle ROLL sur la vitesse PI, avec SAT, sans FILTRE
-             * avec pondération à la RC
-             *
-             *
-             * MANUAL LIFT (pitch)
-             * **/
-
-            // Controle du roll
-
-            // Trouver vitesse de roll
-            float roll_err = para->roll_setpoint * prec_st - matrix::Eulerf(
-                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-            float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc);
-
-            //Saturation de la consigne de vitesse de roll
-            float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max);
-
-            //Saturation de la vitesse de roll ( filtration des vibrations )
-            float roll_spd = math::constrain(att->rollspeed, -para->roll_spd_max, para->roll_spd_max);
-
-            //Trouver error de roll speed
-            float roll_spd_err = roll_spd_sp - roll_spd;
-
-            // Terme prop de roll speed
-            float roll_spd_prop = roll_spd_err * para->roll_p;
-
-            // Terme int de roll speed
-            roll_spd_int = math::constrain(roll_spd_int + roll_spd_err * dt * para->roll_i, -para->roll_int_max,
-                                           para->roll_int_max);
-
-            // Addition des termes
-            float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
-
-            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = -(para->coeff_RC * roll_output + (1.0f - para->coeff_RC) * manual_sp->y);
-
-            //On controle le pitch avec la RC
-            actuators->control[1] = -manual_sp->x;
-
-            //le z et y sont tires de manual_control_setpoint.msg
-            //On controle le yaw avec la RC
-            actuators->control[2] = manual_sp->r;
-
-            //On controle le throttle avec la RC
-            actuators->control[3] = manual_sp->z;
-
-        } else if (para->mode > 2.5f && para->mode < 3.5f) {
-            /** Mode 3 :
-             * AUTO Controle ROLL sur la vitesse PI,
-             * avec SAT, avec FILTRE PASSE BAS 1 avant SAT
-             * avec ponderation à la RC
-             *
-             * AUTO Controle PITCH sur la vitesse PI,
-             * avec SAT, avec FILTRE PASSE BAS 1 avant SAT
-             * avec ponderation à la RC
-             * **/
-
-
-            // Controle du roll
-
-            // Trouver vitesse de roll
-            float roll_err = para->roll_setpoint * prec_st - matrix::Eulerf(
-                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-            float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc);
-
-            //Saturation de la consigne de vitesse de roll
-            float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max);
-
-            //Filtrer la vitesse de roll
-            roll_spd_filtree = (para->k_filter * para->a_filter * dt * att->rollspeed + roll_spd_filtree) /
-                               (para->a_filter * dt + 1.0f);
-
-            //Saturation de la vitesse de roll (filtrage des vibrations)
-            float roll_spd_final = math::constrain(roll_spd_filtree, -para->roll_spd_max, para->roll_spd_max);
-
-            //Calcul de l'erreur de vitesse de roll
-            float roll_spd_err = roll_spd_sp - roll_spd_final;
-
-            // Terme prop de roll speed
-            float roll_spd_prop = roll_spd_err * para->roll_p;
-
-            // Terme int de roll speed
-            roll_spd_int = math::constrain(roll_spd_int + roll_spd_err * dt * para->roll_i, -para->roll_int_max,
-                                           para->roll_int_max);
-
-            // Addition des termes
-            float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
-
-            // Envoyer dans actuatoors ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = -(para->coeff_RC * roll_output + (1.0f - para->coeff_RC) * manual_sp->y);
-
-            // Controle du pitch
-
-            // Trouver vitesse de pitch
-            float pitch_err = matrix::Eulerf(
-                    matrix::Quatf(att->q)).theta(); //att est le nom de la struct qui gere vehicule_attitude
-            float pitch_spd_sp_nonsat = -pitch_err * (1 / para->pitch_tc);
-
-            //Saturation de la consigne de vitesse de pitch
-            float pitch_spd_sp = math::constrain(pitch_spd_sp_nonsat, -para->pitch_spd_max, para->pitch_spd_max);
-
-            //Filtrer la vitesse de pitch
-            pitch_spd_filtree =
-                    (para->k_filter * dt * att->pitchspeed + pitch_spd_filtree) / (para->a_filter * dt + 1.0f);
-
-            //Saturation de la vitesse de pitch (filtrage des vibrations)
-            float pitch_spd_final = math::constrain(pitch_spd_filtree, -para->pitch_spd_max, para->pitch_spd_max);
-
-            //Calcul de l'error de vitesse de pitch
-            float pitch_spd_err = pitch_spd_sp - pitch_spd_final;
-
-            // Terme prop de pitch speed
-            float pitch_spd_prop = pitch_spd_err * para->pitch_p;
-
-            // Terme int de pitch speed
-            pitch_spd_int = math::constrain(pitch_spd_int + pitch_spd_err * dt * para->pitch_i, -para->pitch_int_max,
-                                            para->pitch_int_max);
-
-            // Addition des termes
-            float pitch_output = pitch_scaler * (pitch_spd_prop + pitch_spd_int);
-
-            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[1] = -(para->coeff_RC * pitch_output + (1.0f - para->coeff_RC) * manual_sp->x);
-
-
-            //le z et y sont tires de manual_control_setpoint.msg
-            //On controle le yaw avec la RC
-            actuators->control[2] = manual_sp->r;
-
-            //On controle le throttle avec la RC
-            actuators->control[3] = manual_sp->z;
-
-
-        } else if (para->mode > 3.5f && para->mode < 4.5f) {
-            /** Mode 4 :
-             * AUTO Controle ROLL sur la vitesse PI,
-             * avec SAT, avec FILTRE PASSE BAS 2 avant SAT
-             * avec pondération à la RC
-             *
-             * AUTO Controle LIFT (altitude) sur la position de lift PI (publié sur channel pitch),
-             * sans SAT, sans FILTRE *
-             * avec pondération à la RC
-             *
-             * */
-
-            // Controle du roll
-
-            // Trouver vitesse de roll
-            float roll_err = para->roll_setpoint * prec_st - matrix::Eulerf(
-                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-            float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc);
-
-            //Saturation de la consigne de vitesse de roll
-            float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max);
-
-            //Filtrer la vitesse de roll
-            roll_spd_filtree = para->alpha_filter * att->rollspeed + (1.0f - para->alpha_filter) * roll_spd_filtree;
-
-            //Saturation de la vitesse de roll (filtrage des vibrations)
-            float roll_spd_final = math::constrain(roll_spd_filtree, -para->roll_spd_max, para->roll_spd_max);
-
-            //Calcul de l'erreur de vitesse de roll
-            float roll_spd_err = roll_spd_sp - roll_spd_final;
-
-            // Terme prop de roll speed
-            float roll_spd_prop = roll_spd_err * para->roll_p;
-
-            // Terme int de roll speed
-            roll_spd_int = math::constrain(roll_spd_int + roll_spd_err * dt * para->roll_i, -para->roll_int_max,
-                                           para->roll_int_max);
-
-            // Addition des termes
-            float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
-
-            // Envoyer dans actuatoors ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = -(para->coeff_RC * roll_output + (1.0f - para->coeff_RC) * manual_sp->y);
-
-            // Controle du lift
-
-            // Trouver l'erreur en position
-            float lift_err = para->lift_setpoint - dist_sensor->current_distance;
-
-            //Terme proportionnel
-            float lift_prop = lift_err * para->lift_p;
-
-            //Terme integrateur
-            lift_int = math::constrain(lift_int + lift_err * dt * para->lift_i, -para->lift_int_max,
-                                       para->lift_int_max);
-
-            // Addition des termes
-            float lift_output = lift_scaler * (lift_prop + lift_int);
-
-            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[1] = -(para->coeff_RC * lift_output + (1.0f - para->coeff_RC) * manual_sp->x);
-
-
-            //le z et y sont tires de manual_control_setpoint.msg
-            //On controle le yaw avec la RC
-            actuators->control[2] = manual_sp->r;
-
-            //On controle le throttle avec la RC
-            actuators->control[3] = manual_sp->z;
-        } else if (para->mode > 4.5f && para->mode < 5.5f) {
-            /** Mode 5 :
-             * AUTO Controle ROLL sur la position PI, avec SAT, sans FILTRE
-             * pondération avec la RC
-             *
-             *
-             * MANUAL LIFT (pitch) **/
-
-            //Controle du roll
-
-            //Trouver l'erreur en position
-            float roll_err = para->roll_setpoint * prec_st - matrix::Eulerf(
-                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-
-            //Terme proportionnel
-            float roll_spd_prop = roll_err * para->roll_p;
-
-            //Terme integrateur
-            roll_spd_int = math::constrain(roll_spd_int + roll_err * dt * para->roll_i, -para->roll_int_max,
-                                           para->roll_int_max);
-
-            // Addition des termes
-            float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
-
-            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = -(para->coeff_RC * roll_output + (1.0f - para->coeff_RC) * manual_sp->y);
-
-            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[1] = -manual_sp->x;
-
-            //le z et y sont tires de manual_control_setpoint.msg
-            //On controle le yaw avec la RC
-            actuators->control[2] = manual_sp->r;
-
-            //On controle le throttle avec la RC
-            actuators->control[3] = manual_sp->z;
-        } else if (para->mode > 5.5f && para->mode < 6.5f) {
-            /** Mode 6 :
-             * AUTO TAKEOFF Controle sur foil principal et foil flotteur
-             * en dessous d'une certaine vitesse i.e. s il a pas decolle,
-             * les deux foils sont contrôlé manuellement
-             * pendant decollage, foil flotteur prend la meme info que le foil principal
-             * + controle du ROLL (pondere par param PRAO_TO_SCL_R)
-             *
-             * Après décollage :
-             * AUTO Controle ROLL sur la position PI, avec SAT, sans FILTRE
-             * MANUAL LIFT (pitch) **/
-
-            //Controle du roll
-
-            //Trouver l'erreur en position
-            float roll_err = para->roll_setpoint * prec_st - matrix::Eulerf(
-                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-
-            //Terme proportionnel
-            float roll_spd_prop = roll_err * para->roll_p;
-
-            //Terme integrateur
-            roll_spd_int = math::constrain(roll_spd_int + roll_err * dt * para->roll_i, -para->roll_int_max,
-                                           para->roll_int_max);
-
-            // Addition des termes
-            float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
-
-
-            // Controle du lift
-
-            // Trouver l'erreur en position
-            float lift_err = para->lift_setpoint - dist_sensor->current_distance;
-
-
-            if (speed < para->speed_takeoff_init && lift_err > para->tol_takeoff) {
-                // en dessous d'une certaine vitesse, avant decollage, foil principal est controle manuellement
-                // foil flotteur est controle manuellement
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[0] = -manual_sp->y;
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[1] = -manual_sp->x;
-
-                //On controle le yaw avec la RC
-                actuators->control[2] = manual_sp->r;
-
-                //On controle le throttle avec la RC
-                actuators->control[3] = manual_sp->z;
-
-            } else if (para->speed_takeoff_init < speed && speed < para->speed_takeoff_final &&
-                       lift_err > para->tol_takeoff) {
-                // pendant le decollage, simultanement foil principal et foil flotteur sont actues ensemble
-                // l actuation des foils est proportionnelle a la vitesse du bateau
-                // on maintient un controle du roll quand meme (pondere par param PRAO_TO_SCL_R)
-
-                float takeoff_output =
-                        para->coeff_takeoff * (speed - para->speed_takeoff_init) / para->speed_takeoff_init;
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[0] =
-                        para->scaler_takeoff_roll * takeoff_output - (1.0f - para->scaler_takeoff_roll) * roll_output;
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[1] = -takeoff_output;
-
-                //On controle le yaw avec la RC
-                actuators->control[2] = manual_sp->r;
-
-                //On controle le throttle avec la RC
-                actuators->control[3] = manual_sp->z;
-            } else {
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[0] = -roll_output;
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[1] = -manual_sp->x;
-
-                //le z et y sont tires de manual_control_setpoint.msg
-                //On controle le yaw avec la RC
-                actuators->control[2] = manual_sp->r;
-
-                //On controle le throttle avec la RC
-                actuators->control[3] = manual_sp->z;
-            }
-        } else if (para->mode > 6.5f && para->mode < 7.5f) {
-            /** Mode 7 :
-             * AUTO TAKEOFF Controle sur foil principal et foil flotteur
-             * en dessous d'une certaine vitesse i.e. s il a pas decolle,
-             * les deux foils sont contrôlé manuellement
-             * pendant decollage, foil flotteur prend la meme info que le foil principal
-             * + controle du ROLL (pondere par param PRAO_TO_SCL_R)
-             *
-             * Après décollage :
-             * AUTO Controle ROLL sur la position PI, avec SAT, sans FILTRE
-             * AUTO Controle LIFT (altitude) sur la position de lift PI (publié sur channel pitch),
-             * sans SAT, sans FILTRE **/
-
-
-            //Controle du roll
-
-            //Trouver l'erreur en position
-            float roll_err = para->roll_setpoint * prec_st - matrix::Eulerf(
-                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-
-            //Terme proportionnel
-            float roll_spd_prop = roll_err * para->roll_p;
-
-            //Terme integrateur
-            roll_spd_int = math::constrain(roll_spd_int + roll_err * dt * para->roll_i, -para->roll_int_max,
-                                           para->roll_int_max);
-
-            // Addition des termes
-            float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
-
-
-            // Controle du lift
-
-            // Trouver l'erreur en position
-            float lift_err = para->lift_setpoint - dist_sensor->current_distance;
-
-            //Terme proportionnel
-            float lift_prop = lift_err * para->lift_p;
-
-            //Terme integrateur
-            lift_int = math::constrain(lift_int + lift_err * dt * para->lift_i, -para->lift_int_max,
-                                       para->lift_int_max);
-
-            // Addition des termes
-            float lift_output = lift_scaler * (lift_prop + lift_int);
-
-            if (speed < para->speed_takeoff_init && lift_err > para->tol_takeoff) {
-                // en dessous d'une certaine vitesse, avant decollage, foil principal est controle manuellement
-                // foil flotteur est controle manuellement
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[0] = -manual_sp->y;
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[1] = -manual_sp->x;
-
-                //On controle le yaw avec la RC
-                actuators->control[2] = manual_sp->r;
-
-                //On controle le throttle avec la RC
-                actuators->control[3] = manual_sp->z;
-
-            } else if (para->speed_takeoff_init < speed && speed < para->speed_takeoff_final &&
-                       lift_err > para->tol_takeoff) {
-                // pendant le decollage, simultanement foil principal et foil flotteur sont actues ensemble
-                // l actuation des foils est proportionnelle a la vitesse du bateau
-                // on maintient un controle du roll quand meme (pondere par param PRAO_TO_SCL_R)
-
-                float takeoff_output =
-                        para->coeff_takeoff * (speed - para->speed_takeoff_init) / para->speed_takeoff_init;
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[0] =
-                        para->scaler_takeoff_roll * takeoff_output - (1.0f - para->scaler_takeoff_roll) * roll_output;
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[1] = -takeoff_output;
-
-                //On controle le yaw avec la RC
-                actuators->control[2] = manual_sp->r;
-
-                //On controle le throttle avec la RC
-                actuators->control[3] = manual_sp->z;
-            } else {
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[0] = -roll_output;
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[1] = -lift_output;
-
-                //le z et y sont tires de manual_control_setpoint.msg
-                //On controle le yaw avec la RC
-                actuators->control[2] = manual_sp->r;
-
-                //On controle le throttle avec la RC
-                actuators->control[3] = manual_sp->z;
-            }
-        } else if (para->mode > 7.5f && para->mode < 8.5f) {
-            /** Mode 8 :
-             * AUTO TAKEOFF Controle sur foil principal et foil flotteur
-             * en dessous d'une certaine vitesse i.e. s il a pas decolle,
-             * les deux foils sont contrôlé manuellement
-             * pendant decollage, foil flotteur prend la meme info que le foil principal
-             * + controle du ROLL (pondere par param PRAO_TO_SCL_R)
-             *
-             * Après décollage :
-             * AUTO Controle ROLL sur la vitesse PI, avec SAT, sans FILTRE
-             * AUTO Controle LIFT (altitude) sur la position de lift PI (publié sur channel pitch),
-             * sans SAT, sans FILTRE **/
-
-
-            // Controle du roll
-
-            // Trouver vitesse de roll
-            float roll_err = para->roll_setpoint * prec_st - matrix::Eulerf(
-                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-            float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc);
-
-            //Saturation de la consigne de vitesse de roll
-            float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max);
-
-            //Saturation de la vitesse de roll ( filtration des vibrations )
-            float roll_spd = math::constrain(att->rollspeed, -para->roll_spd_max, para->roll_spd_max);
-
-            //Trouver error de roll speed
-            float roll_spd_err = roll_spd_sp - roll_spd;
-
-            // Terme prop de roll speed
-            float roll_spd_prop = roll_spd_err * para->roll_p;
-
-            // Terme int de roll speed
-            roll_spd_int = math::constrain(roll_spd_int + roll_spd_err * dt * para->roll_i, -para->roll_int_max,
-                                           para->roll_int_max);
-
-            // Addition des termes
-            float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
-
-
-            // Controle du lift
-
-            // Trouver l'erreur en position
-            float lift_err = para->lift_setpoint - dist_sensor->current_distance;
-
-            //Terme proportionnel
-            float lift_prop = lift_err * para->lift_p;
-
-            //Terme integrateur
-            lift_int = math::constrain(lift_int + lift_err * dt * para->lift_i, -para->lift_int_max,
-                                       para->lift_int_max);
-
-            // Addition des termes
-            float lift_output = lift_scaler * (lift_prop + lift_int);
-
-            if (speed < para->speed_takeoff_init && lift_err > para->tol_takeoff) {
-                // en dessous d'une certaine vitesse, avant decollage, foil principal est controle manuellement
-                // foil flotteur est controle manuellement
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[0] = -manual_sp->y;
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[1] = -manual_sp->x;
-
-                //On controle le yaw avec la RC
-                actuators->control[2] = manual_sp->r;
-
-                //On controle le throttle avec la RC
-                actuators->control[3] = manual_sp->z;
-
-            } else if (para->speed_takeoff_init < speed && speed < para->speed_takeoff_final &&
-                       lift_err > para->tol_takeoff) {
-                // pendant le decollage, simultanement foil principal et foil flotteur sont actues ensemble
-                // l actuation des foils est proportionnelle a la vitesse du bateau
-                // on maintient un controle du roll quand meme (pondere par param PRAO_TO_SCL_R)
-
-                float takeoff_output =
-                        para->coeff_takeoff * (speed - para->speed_takeoff_init) / para->speed_takeoff_init;
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[0] =
-                        para->scaler_takeoff_roll * takeoff_output - (1.0f - para->scaler_takeoff_roll) * roll_output;
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[1] = -takeoff_output;
-
-                //On controle le yaw avec la RC
-                actuators->control[2] = manual_sp->r;
-
-                //On controle le throttle avec la RC
-                actuators->control[3] = manual_sp->z;
-            } else {
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[0] = -roll_output;
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[1] = -lift_output;
-
-                //le z et y sont tires de manual_control_setpoint.msg
-                //On controle le yaw avec la RC
-                actuators->control[2] = manual_sp->r;
-
-                //On controle le throttle avec la RC
-                actuators->control[3] = manual_sp->z;
-            }
-        } else if (para->mode > 8.5f && para->mode < 9.5f) {
-            /** Mode 9 :
-             * MANUAL TAKEOFF sur foil principal et foil flotteur
-             * en dessous d'une certaine vitesse i.e. s il a pas decolle ou pendant decollage,
-             * le foil principal est controle manuellement
-             * foil flotteur prend la meme info que le foil principal
-             * + gauche droite de la RC (pondere par param PRAO_TO_SCL_R)
-             *
-             * Après décollage :
-             * AUTO Controle ROLL sur la position PI, avec SAT, sans FILTRE
-             * AUTO Controle LIFT (altitude) sur la position de lift PI (publié sur channel pitch),
-             * sans SAT, sans FILTRE **/
-
-            //Controle du roll
-
-            //Trouver l'erreur en position
-            float roll_err = para->roll_setpoint * prec_st - matrix::Eulerf(
-                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
-
-            //Terme proportionnel
-            float roll_spd_prop = roll_err * para->roll_p;
-
-            //Terme integrateur
-            roll_spd_int = math::constrain(roll_spd_int + roll_err * dt * para->roll_i, -para->roll_int_max,
-                                           para->roll_int_max);
-
-            // Addition des termes
-            float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
-
-
-            // Controle du lift
-
-            // Trouver l'erreur en position
-            float lift_err = para->lift_setpoint - dist_sensor->current_distance;
-
-            //Terme proportionnel
-            float lift_prop = lift_err * para->lift_p;
-
-            //Terme integrateur
-            lift_int = math::constrain(lift_int + lift_err * dt * para->lift_i, -para->lift_int_max,
-                                       para->lift_int_max);
-
-            // Addition des termes
-            float lift_output = lift_scaler * (lift_prop + lift_int);
-
-            if (speed < para->speed_takeoff_final && lift_err > para->tol_takeoff) {
-                // en dessous d'une certaine vitesse, avant decollage, foil principal est controle manuellement
-                // foil flotteur prend la meme info que le foil principal + le gauche/droite de la RC (pondere par param PRAO_TO_SCL_R)
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[0] =
-                        para->scaler_takeoff_roll * manual_sp->x - (1.0f - para->scaler_takeoff_roll) * manual_sp->y;
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[1] = -manual_sp->x;
-
-                //On controle le yaw avec la RC
-                actuators->control[2] = manual_sp->r;
-
-                //On controle le throttle avec la RC
-                actuators->control[3] = manual_sp->z;
-            } else {
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[0] = -roll_output;
-
-                // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-                actuators->control[1] = -lift_output;
-
-                //le z et y sont tires de manual_control_setpoint.msg
-                //On controle le yaw avec la RC
-                actuators->control[2] = manual_sp->r;
-
-                //On controle le throttle avec la RC
-                actuators->control[3] = manual_sp->z;
-            }
-        } else if (para->mode > 9.5f && para->mode < 10.5f) {
-            /** Mode 10 :
-             * AUTO Controle ROLL sur la vitesse PI, avec SAT, sans FILTRE
+        } else if (manual_sp->aux1 > -0.5f && manual_sp->aux1 < 0.5f) {
+            /** Mode 1 : STABILIZE
+             * AUTO Controle ROLL sur la vitesse PI :
+             * SAT par param PRAO_SAT
+             * FILTRE par param PRAO_FILTER
              * Setpoint à la RC
              *
              *
@@ -921,49 +239,63 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
              *
              * Equivalent au mode stabilize du bifoiler
              * **/
-            // Controle du roll
 
-            // Trouver vitesse de roll A Changer si la longueur du palpeur change
-            float roll_err = manual_sp->y - matrix::Eulerf(
-                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
+            /** Controle du roll **/
+
+            // Trouver vitesse de roll
+            float roll_err = manual_sp->y - matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
             float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc);
+            float roll_spd_err = roll_err;
 
-            //Saturation de la consigne de vitesse de roll
-            float roll_spd_sp = math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max);
+            // Controle en vitesse
+            // Si le parametre PRAO_SPD_OR_POS est positif, controle en vitesse,
+            // s'il est négatif controle en position
+            if (para->spd_or_pos > 0.0f) {
+                // Filtrer la vitesse de roll
+                // Chaque ligne correspond à l'activation par param PRAO_FILTER = 0 ou 1 ou 2
+                // 1ère ligne correspond à pas de filtre (PRAO_FILTER = 0)
+                // 2ème ligne correspond à filtre PASSE-BAS 1 (PRAO_FILTER = 1)
+                // 2ème ligne correspond à filtre PASSE-BAS 1 (PRAO_FILTER = 2)
+                roll_spd_filtree = 0.5f * (2.0f - para->filter) * (1.0f - para->filter) * (att->rollspeed) +
+                                   (2.0f - para->filter) * (para->filter) * ((para->k_filter * para->a_filter * dt * att->rollspeed + roll_spd_filtree) / (para->a_filter * dt + 1.0f)) +
+                                   0.5f * (para->filter - 1.0f) * (para->filter) * (para->alpha_filter * att->rollspeed + (1.0f - para->alpha_filter) * roll_spd_filtree);
 
-            //Saturation de la vitesse de roll ( filtration des vibrations )
-            float roll_spd = math::constrain(att->rollspeed, -para->roll_spd_max, para->roll_spd_max);
 
-            //Trouver error de roll speed
-            float roll_spd_err = roll_spd_sp - roll_spd;
+                // Saturation de la consigne de vitesse de roll et de la vitesse de roll et calcul de l'erreur
+                // Activation par le paramètre PRAO_SAT
+                // PRAO_SAT = 0 -> pas de saturation
+                // PRAO_SAT = 1 -> saturation
+                float roll_spd_sp = (1.0f - para->sat) * roll_spd_sp_nonsat +
+                                    (para->sat) *(math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max));
+                float roll_spd = (1.0f - para->sat) * roll_spd_filtree +
+                                 (para->sat) *(math::constrain(roll_spd_filtree, -para->roll_spd_max, para->roll_spd_max));
+                roll_spd_err = roll_spd_sp - roll_spd;
+            }
 
-            // Terme prop de roll speed
+            // PI sur la vitesse de roll avec saturation du terme integrateur (permet de le vider)
             float roll_spd_prop = roll_spd_err * para->roll_p;
-
-            // Terme int de roll speed
-            roll_spd_int = math::constrain(roll_spd_int + roll_spd_err * dt * para->roll_i, -para->roll_int_max,
-                                           para->roll_int_max);
-
-            // Addition des termes
+            roll_spd_int = math::constrain(roll_spd_int + roll_spd_err * dt * para->roll_i, -para->roll_int_max, para->roll_int_max);
             float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
-            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = -(para->coeff_RC * roll_output + (1.0f - para->coeff_RC) * manual_sp->y);
 
-            //On controle le pitch avec la RC
+            /** Envoie dans actuators (les numeros de channel sont tires de actuator_controls) **/
+            // control[0] -> roll
+            // control[1] -> lift (pitch)
+            // control[2] -> yaw
+            // control[3] -> throttle
+            // NE CORRESPOND PAS AU BRANCHEMENT SUR LE PIXHAWK (voir ordre dans le mixer pour cela)
+            actuators->control[0] = -roll_output;
             actuators->control[1] = -manual_sp->x;
-
-            //le z et y sont tires de manual_control_setpoint.msg
-            //On controle le yaw avec la RC
             actuators->control[2] = manual_sp->r;
-
-            //On controle le throttle avec la RC
             actuators->control[3] = manual_sp->z;
 
-        } else if (para->mode > 10.5f && para->mode < 11.5f) {
-            /** Mode 11 :
-             * AUTO Controle ROLL sur la position PI, sans SAT, sans FILTRE
-             * setpoint à la RC
+        } else if (manual_sp->aux1 > 0.5f) {
+            /** Mode 2 : ALTITUDE
+             * AUTO Controle ROLL sur la vitesse PI :
+             * SAT par param PRAO_SAT
+             * FILTRE par param PRAO_FILTER
+             * Setpoint à la RC
+             *
              *
              * AUTO Controle LIFT (altitude) sur la position de lift PI (publié sur channel pitch)
              * sans SAT, sans FILTRE
@@ -972,58 +304,80 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
              * Equivalent au mode altitude du bifoiler
              * **/
 
-            //Controle du roll
+            /** Controle du roll **/
 
-            //Trouver l'erreur en position
+            // Trouver vitesse de roll
             float roll_err = manual_sp->y - matrix::Eulerf(
                     matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
+            float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc);
+            float roll_spd_err = roll_err;
 
-            //Terme proportionnel
-            float roll_spd_prop = roll_err * para->roll_p;
+            // Controle en vitesse
+            // Si le parametre PRAO_SPD_OR_POS est positif, controle en vitesse,
+            // s'il est négatif controle en position
+            if (para->spd_or_pos > 0.0f) {
+                // Filtrer la vitesse de roll
+                // Chaque ligne correspond à l'activation par param PRAO_FILTER = 0 ou 1 ou 2
+                // 1ère ligne correspond à pas de filtre (PRAO_FILTER = 0)
+                // 2ème ligne correspond à filtre PASSE-BAS 1 (PRAO_FILTER = 1)
+                // 2ème ligne correspond à filtre PASSE-BAS 1 (PRAO_FILTER = 2)
+                roll_spd_filtree = 0.5f * (2.0f - para->filter) * (1.0f - para->filter) * (att->rollspeed) +
+                                   (2.0f - para->filter) * (para->filter) *
+                                   ((para->k_filter * para->a_filter * dt * att->rollspeed + roll_spd_filtree) /
+                                    (para->a_filter * dt + 1.0f)) +
+                                   0.5f * (para->filter - 1.0f) * (para->filter) *
+                                   (para->alpha_filter * att->rollspeed +
+                                    (1.0f - para->alpha_filter) * roll_spd_filtree);
 
-            //Terme integrateur
-            roll_spd_int = math::constrain(roll_spd_int + roll_err * dt * para->roll_i, -para->roll_int_max,
+
+                // Saturation de la consigne de vitesse de roll et de la vitesse de roll et calcul de l'erreur
+                // Activation par le paramètre PRAO_SAT
+                // PRAO_SAT = 0 -> pas de saturation
+                // PRAO_SAT = 1 -> saturation
+                float roll_spd_sp = (1.0f - para->sat) * roll_spd_sp_nonsat +
+                                    (para->sat) *
+                                    (math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max));
+                float roll_spd = (1.0f - para->sat) * roll_spd_filtree +
+                                 (para->sat) *
+                                 (math::constrain(roll_spd_filtree, -para->roll_spd_max, para->roll_spd_max));
+                roll_spd_err = roll_spd_sp - roll_spd;
+            }
+
+
+            // PI sur la vitesse de roll avec saturation du terme integrateur (permet de le vider)
+            float roll_spd_prop = roll_spd_err * para->roll_p;
+            roll_spd_int = math::constrain(roll_spd_int + roll_spd_err * dt * para->roll_i, -para->roll_int_max,
                                            para->roll_int_max);
-
-            // Addition des termes
             float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
-            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[0] = -(para->coeff_RC * roll_output + (1.0f - para->coeff_RC) * manual_sp->y);
 
-            // Controle du lift
+            /** Controle du lift **/
 
-            // Trouver l'erreur en position
+            // Calcul de l'erreur par rapport au setpoint désiré (qui vient de la RC)
+            // ATTENTION: Changer si la taille du palpeur change de l=0.8m
+            // (marge de sécurité pour pas que le palpeur soit vertical)
+            float lift_err =  0.4f * (manual_sp->x + 1.0f) - dist_sensor->current_distance;
 
-            //Changer si la taille du palpeur change l=0.85m
-
-            float lift_err =  0.5f * (manual_sp->x + 0.8f) - dist_sensor->current_distance;
-
-            //Terme proportionnel
+            // PI sur la position de lift avec saturation du terme integrateur (permet de le vider)
             float lift_prop = lift_err * para->lift_p;
-
-            //Terme integrateur
-            lift_int = math::constrain(lift_int + lift_err * dt * para->lift_i, -para->lift_int_max,
-                                       para->lift_int_max);
-
-            // Addition des termes
+            lift_int = math::constrain(lift_int + lift_err * dt * para->lift_i, -para->lift_int_max, para->lift_int_max);
             float lift_output = lift_scaler * (lift_prop + lift_int);
 
-            // Envoyer dans actuators ( les numeros de channel sont tires de actuator_controls )
-            actuators->control[1] = -(para->coeff_RC * lift_output + (1.0f - para->coeff_RC) * manual_sp->x);
 
-
-            //le z et y sont tires de manual_control_setpoint.msg
-            //On controle le yaw avec la RC
+            /** Envoie dans actuators (les numeros de channel sont tires de actuator_controls) **/
+            // control[0] -> roll
+            // control[1] -> lift (pitch)
+            // control[2] -> yaw
+            // control[3] -> throttle
+            // NE CORRESPOND PAS AU BRANCHEMENT SUR LE PIXHAWK (voir ordre dans le mixer pour cela)
+            actuators->control[0] = -roll_output;
+            actuators->control[1] = -lift_output;
             actuators->control[2] = manual_sp->r;
-
-            //On controle le throttle avec la RC
             actuators->control[3] = manual_sp->z;
-
-
         }
     }
 }
+
 
 //Main thread
     int PRAO_thread_main(int argc, char *argv[]) {
@@ -1086,9 +440,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
         // Initialisation de termes reutilises
         float roll_spd_int = 0;
-        float pitch_spd_int = 0;
         float roll_spd_filtree = 0;
-        float pitch_spd_filtree = 0;
         float lift_int = 0;
 
         while (!thread_should_exit) {
@@ -1144,7 +496,7 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
                     //Appeler la fonction qui controle les actuators
                     control_attitude(&pp, &manual_sp, &att, &actuators, &global_pos, last_run,
-                                     roll_spd_int, pitch_spd_int, roll_spd_filtree, pitch_spd_filtree, &dist_sensor, lift_int);
+                                     roll_spd_int, roll_spd_filtree, &dist_sensor, lift_int);
 
                     //Get vehicule status
                     orb_copy(ORB_ID(vehicle_status), vstatus_sub, &vstatus);

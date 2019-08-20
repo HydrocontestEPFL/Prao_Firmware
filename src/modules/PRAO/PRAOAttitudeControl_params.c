@@ -1,7 +1,3 @@
-//
-// Created by Johan on 09.03.2019.
-//
-
 /****************************************************************************
  *
  *   Copyright (c) 2015 PX4 Development Team. All rights reserved.
@@ -40,25 +36,10 @@
  * Parameters for the PRAO Attitude Controller
  *
  * @author Johan Poccard <johan.poccard-saudart@epfl.ch>
+ * @author Fabien Benoist <f.benoist@epfl.ch>
+ * @author Guillaume Rozand <guillaume.rozand@epfl.ch>
  */
 
-/**
- * Proportionnal gain of pitch controller
- *
- * @min 0.0
- * @max 100.0
- * @group PRAO Attitude Control
- */
- PARAM_DEFINE_FLOAT(PRAO_P_P,0.5f);
-
-/**
-* Integral gain of pitch controller
-*
-* @min 0.0
-* @max 100.0
-* @group PRAO Attitude Control
-*/
-PARAM_DEFINE_FLOAT(PRAO_P_I,0.5f);
 
 /**
  * Proportionnal gain of roll controller
@@ -67,7 +48,7 @@ PARAM_DEFINE_FLOAT(PRAO_P_I,0.5f);
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_R_P,60f);
+PARAM_DEFINE_FLOAT(PRAO_R_P,10.0f);
 
 /**
  * Integral gain of roll controller
@@ -79,15 +60,6 @@ PARAM_DEFINE_FLOAT(PRAO_R_P,60f);
 PARAM_DEFINE_FLOAT(PRAO_R_I,0.5f);
 
 /**
- * Pitch scaler
- *
- * @min 0.0
- * @max 100.0
- * @group PRAO Attitude Control
- */
-PARAM_DEFINE_FLOAT(PRAO_P_SCALER,0.5f);
-
-/**
  * Roll scaler
  *
  * @min 0.0
@@ -95,15 +67,6 @@ PARAM_DEFINE_FLOAT(PRAO_P_SCALER,0.5f);
  * @group PRAO Attitude Control
  */
 PARAM_DEFINE_FLOAT(PRAO_R_SCALER,0.5f);
-
-/**
- * Mode
- *
- * @min 0.0
- * @max 100.0
- * @group PRAO Attitude Control
- */
-PARAM_DEFINE_FLOAT(PRAO_MODE,0.0f);
 
 /**
  * Roll time constant (s)
@@ -115,13 +78,13 @@ PARAM_DEFINE_FLOAT(PRAO_MODE,0.0f);
 PARAM_DEFINE_FLOAT(PRAO_R_TC,1.0f);
 
 /**
- * Pitch time constant (s)
+ * Roll speed max (rad/s)
  *
  * @min 0.0
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_P_TC,1.0f);
+PARAM_DEFINE_FLOAT(PRAO_R_SPD_MAX,10.0f);
 
 /**
  * Roll integrator max
@@ -132,68 +95,6 @@ PARAM_DEFINE_FLOAT(PRAO_P_TC,1.0f);
  */
 PARAM_DEFINE_FLOAT(PRAO_R_INT_MAX,10.0f);
 
-/**
- * Pitch integrator max
- *
- * @min 0.0
- * @max 100.0
- * @group PRAO Attitude Control
- */
-PARAM_DEFINE_FLOAT(PRAO_P_INT_MAX,1f);
-
-/**
- * Roll speed max (rad/s)
- *
- * @min 0.0
- * @max 100.0
- * @group PRAO Attitude Control
- */
-PARAM_DEFINE_FLOAT(PRAO_R_SPD_MAX,10.0f);
-
-/**
- * Pitch speed max (rad/s)
- *
- * @min 0.0
- * @max 100.0
- * @group PRAO Attitude Control
- */
-PARAM_DEFINE_FLOAT(PRAO_P_SPD_MAX,10.0f);
-
-/**
- * K filtre
- *
- * @min 0.0
- * @max 100.0
- * @group PRAO Attitude Control
- */
-PARAM_DEFINE_FLOAT(PRAO_K_FILTER,10.0f);
-
-/**
- * A filtre
- *
- * @min 0.0
- * @max 100.0
- * @group PRAO Attitude Control
- */
-PARAM_DEFINE_FLOAT(PRAO_A_FILTER,10.0f);
-
-/**
- * Alpha filter
- *
- * @min 0.0
- * @max 100.0
- * @group PRAO Attitude Control
- */
-PARAM_DEFINE_FLOAT(PRAO_ALPHA_FILT,10.0f);
-
-/**
- * Reverse mode to invert throttle command
- *
- * @min 0.0
- * @max 100.0
- * @group PRAO Attitude Control
- */
-PARAM_DEFINE_FLOAT(PRAO_REVERSE,1.0f);
 
 /**
  * Proportionnal gain of lift controller
@@ -202,7 +103,7 @@ PARAM_DEFINE_FLOAT(PRAO_REVERSE,1.0f);
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_L_P,20f);
+PARAM_DEFINE_FLOAT(PRAO_L_P,10.0f);
 
 /**
 * Integral gain of lift controller
@@ -232,73 +133,55 @@ PARAM_DEFINE_FLOAT(PRAO_L_SCALER,0.5f);
 PARAM_DEFINE_FLOAT(PRAO_L_INT_MAX,10.0f);
 
 /**
- * Desired altitude of flight of the boat (m)
+ * K filtre
  *
  * @min 0.0
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_ALTITUDE,0.2f);
+PARAM_DEFINE_FLOAT(PRAO_K_FILTER,10.0f);
 
 /**
- * Roll offset of flight of the boat x1000
+ * A filtre
  *
- * @min -10000
- * @max 1000.0
- * @group PRAO Attitude Control
- */
-PARAM_DEFINE_FLOAT(PRAO_ROLL_SP,-50.0f);
-
-/**
- * Speed at which the PRAO begins take off procedure if desired altitude is not yet reached (m/s)
- *
- * @min -100.0
+ * @min 0.0
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_TO_SPD_IN,2.0f);
+PARAM_DEFINE_FLOAT(PRAO_A_FILTER,10.0f);
 
 /**
- * Speed at which the PRAO finishes take off procedure even if desired altitude is not yet reached (m/s)
+ * Alpha filter
  *
- * @min -100.0
+ * @min 0.0
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_TO_SPD_FN,4.0f);
+PARAM_DEFINE_FLOAT(PRAO_ALPHA_FILT,10.0f);
 
 /**
- * Acceptable altitude tolerance under which takeoff procedure finishes even if speed is still too low (m)
+ * Type of low pass filter desired for roll (0->none, 1->PASSE_BAS1, 2->PASSE-BAS2)
  *
- * @min -100.0
+ * @min 0.0
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_TO_TOL,0.1f);
+PARAM_DEFINE_FLOAT(PRAO_FILTER,0.0f);
 
 /**
- * Ponderation coefficient for the command sent to the small foil during takeoff (1 means no roll control, 0 means no altitude control)
+ * Saturation for roll (0->none, 1->saturation)
  *
- * @min -100.0
+ * @min 0.0
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_TO_SCL_R,0.1f);
+PARAM_DEFINE_FLOAT(PRAO_SAT,0.0f);
 
 /**
- * Coefficient for scaling takeoff actuation (to be at full actuation at some point during takeoff, > 1)
+ * Switch between position and speed control for roll (negative->position control, positive->speed control)
  *
- * @min -100.0
+ * @min 0.0
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_TO_COEFF,2.0f);
-
-/**
- * Ponderation coefficient for the command sent to all servos between RC and auto control (0 means RC control, 1 normal control)
- *
- * @min -100.0
- * @max 100.0
- * @group PRAO Attitude Control
- */
-PARAM_DEFINE_FLOAT(PRAO_TO_RC,0.7f);
+PARAM_DEFINE_FLOAT(PRAO_SPD_OR_POS,1.0f);

@@ -31,6 +31,15 @@
  *
  ****************************************************************************/
 
+/**
+ * @file PRAOAttitudeControl.h
+ * PRAO Attitude Controller header
+ *
+ * @author Johan Poccard <johan.poccard-saudart@epfl.ch>
+ * @author Fabien Benoist <f.benoist@epfl.ch>
+ * @author Guillaume Rozand <guillaume.rozand@epfl.ch>
+ */
+
 #include <px4_module.h>
 #include <px4_module_params.h>
 #include <drivers/drv_hrt.h>
@@ -68,64 +77,38 @@ using uORB::Subscription;
 struct _params {
     float roll_p;
     float roll_i;
-    float pitch_p;
-    float pitch_i;
-    float pitch_scl;
     float roll_scl;
-    float mode;
     float roll_tc;
-    float pitch_tc;
     float roll_spd_max;
-    float pitch_spd_max;
     float roll_int_max;
-    float pitch_int_max;
-    float k_filter;
-    float a_filter;
-    float alpha_filter;
-    float reverse;
     float lift_p;
     float lift_i;
     float lift_scl;
     float lift_int_max;
-    float lift_setpoint;
-    float roll_setpoint;
-    float speed_takeoff_init;
-    float speed_takeoff_final;
-    float tol_takeoff;
-    float scaler_takeoff_roll;
-    float coeff_takeoff;
-    float coeff_RC;
+    float k_filter;
+    float a_filter;
+    float alpha_filter;
+    float filter;
+    float sat;
+    float spd_or_pos;
 };
 
 //Initialise la structure des handles de param
 struct _param_handles {
-    param_t roll_p;
     param_t roll_i;
-    param_t pitch_p;
-    param_t pitch_i;
-    param_t pitch_scl;
+    param_t roll_p;
     param_t roll_scl;
-    param_t mode;
     param_t roll_tc;
-    param_t pitch_tc;
     param_t roll_spd_max;
-    param_t pitch_spd_max;
     param_t roll_int_max;
-    param_t pitch_int_max;
-    param_t k_filter;
-    param_t a_filter;
-    param_t alpha_filter;
-    param_t reverse;
     param_t lift_p;
     param_t lift_i;
     param_t lift_scl;
     param_t lift_int_max;
-    param_t lift_setpoint;
-    param_t roll_setpoint;
-    param_t speed_takeoff_init;
-    param_t speed_takeoff_final;
-    param_t tol_takeoff;
-    param_t scaler_takeoff_roll;
-    param_t coeff_takeoff;
-    param_t coeff_RC;
+    param_t k_filter;
+    param_t a_filter;
+    param_t alpha_filter;
+    param_t filter;
+    param_t sat;
+    param_t spd_or_pos;
 };
