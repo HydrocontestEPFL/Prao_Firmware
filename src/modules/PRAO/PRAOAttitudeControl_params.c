@@ -48,7 +48,7 @@
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_R_P,10.0f);
+PARAM_DEFINE_FLOAT(PRAO_R_P,15.0f);
 
 /**
  * Integral gain of roll controller
@@ -66,13 +66,13 @@ PARAM_DEFINE_FLOAT(PRAO_R_I,0.5f);
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_R_SCALER,0.5f);
+PARAM_DEFINE_FLOAT(PRAO_R_SCALER,0.7f);
 
 /**
  * Roll time constant (s)
  *
  * @min 0.0
- * @max 100.0
+ * @max 1.0
  * @group PRAO Attitude Control
  */
 PARAM_DEFINE_FLOAT(PRAO_R_TC,1.0f);
@@ -103,7 +103,7 @@ PARAM_DEFINE_FLOAT(PRAO_R_INT_MAX,10.0f);
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_L_P,10.0f);
+PARAM_DEFINE_FLOAT(PRAO_L_P,30.0f);
 
 /**
 * Integral gain of lift controller
@@ -121,7 +121,7 @@ PARAM_DEFINE_FLOAT(PRAO_L_I,0.5f);
  * @max 100.0
  * @group PRAO Attitude Control
  */
-PARAM_DEFINE_FLOAT(PRAO_L_SCALER,0.5f);
+PARAM_DEFINE_FLOAT(PRAO_L_SCALER,0.7f);
 
 /**
  * Lift integrator max
@@ -185,3 +185,22 @@ PARAM_DEFINE_FLOAT(PRAO_SAT,0.0f);
  * @group PRAO Attitude Control
  */
 PARAM_DEFINE_FLOAT(PRAO_SPD_OR_POS,1.0f);
+
+/**
+ * Position of the palpeur at the vertical (ems22 test)
+ *
+ * @min -10.0
+ * @max 10.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_PLP_VERTI,0.92f);
+
+/**
+ * Position of the palpeur at the horizontal (ems22 test)
+ *
+ * @min -10.0
+ * @max 10.0
+ * @group PRAO Attitude Control
+ */
+PARAM_DEFINE_FLOAT(PRAO_PLP_HORIZON,-0.666f);
+

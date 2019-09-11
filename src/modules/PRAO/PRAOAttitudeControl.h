@@ -91,6 +91,8 @@ struct _params {
     float filter;
     float sat;
     float spd_or_pos;
+    float plp_vtl;
+    float plp_hzl;
 };
 
 //Initialise la structure des handles de param
@@ -111,4 +113,6 @@ struct _param_handles {
     param_t filter;
     param_t sat;
     param_t spd_or_pos;
+    param_t plp_vtl;
+    param_t plp_hzl;
 };

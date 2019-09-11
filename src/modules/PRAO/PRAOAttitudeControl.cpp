@@ -143,6 +143,8 @@ int parameters_init(struct _param_handles *h)
     h->filter       =   param_find("PRAO_FILTER");
     h->sat          =   param_find("PRAO_SAT");
     h->spd_or_pos   =   param_find("PRAO_SPD_OR_POS");
+    h->plp_vtl      =   param_find("PRAO_PLP_VERTI");
+    h->plp_hzl      =   param_find("PRAO_PLP_HORIZON");
     return 0;
 }
 
@@ -165,6 +167,9 @@ int parameters_update(const struct _param_handles *h, struct _params *p)
     param_get(h->filter, &(p->filter));
     param_get(h->sat, &(p->sat));
     param_get(h->spd_or_pos, &(p->spd_or_pos));
+    param_get(h->plp_vtl, &(p->plp_vtl));
+    param_get(h->plp_hzl, &(p->plp_hzl));
+
     return 0;
 }
 
@@ -193,8 +198,9 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
     }
 
     //Faire les scalers
-    float roll_scaler = para->roll_scl / powf(speed_ctrl, 2);
-    float lift_scaler = para->lift_scl / powf(speed_ctrl, 2);
+    float roll_scaler = para->roll_scl + (1 - para->roll_scl ) / powf(speed_ctrl, 2);
+    float lift_scaler = para->lift_scl + (1 - para->lift_scl ) / powf(speed_ctrl, 2);
+
 
     if (manual_sp->aux2 > 0.0f) {
         /** Mode REVERSE : Si on est en mode reverse (marche arrière)
@@ -212,7 +218,6 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
         actuators->control[3] = -manual_sp->z;
 
     } else {
-
         if (manual_sp->aux1 < -0.5f) {
             /** Mode 0 : MANUEL **/
 
@@ -243,7 +248,8 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
             /** Controle du roll **/
 
             // Trouver vitesse de roll
-            float roll_err = manual_sp->y - matrix::Eulerf(matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
+            float roll_err = manual_sp->y - matrix::Eulerf(
+                    matrix::Quatf(att->q)).phi(); //att est le nom de la struct qui gere vehicule_attitude
             float roll_spd_sp_nonsat = roll_err * (1 / para->roll_tc);
             float roll_spd_err = roll_err;
 
@@ -257,8 +263,12 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
                 // 2ème ligne correspond à filtre PASSE-BAS 1 (PRAO_FILTER = 1)
                 // 2ème ligne correspond à filtre PASSE-BAS 1 (PRAO_FILTER = 2)
                 roll_spd_filtree = 0.5f * (2.0f - para->filter) * (1.0f - para->filter) * (att->rollspeed) +
-                                   (2.0f - para->filter) * (para->filter) * ((para->k_filter * para->a_filter * dt * att->rollspeed + roll_spd_filtree) / (para->a_filter * dt + 1.0f)) +
-                                   0.5f * (para->filter - 1.0f) * (para->filter) * (para->alpha_filter * att->rollspeed + (1.0f - para->alpha_filter) * roll_spd_filtree);
+                                   (2.0f - para->filter) * (para->filter) *
+                                   ((para->k_filter * para->a_filter * dt * att->rollspeed + roll_spd_filtree) /
+                                    (para->a_filter * dt + 1.0f)) +
+                                   0.5f * (para->filter - 1.0f) * (para->filter) *
+                                   (para->alpha_filter * att->rollspeed +
+                                    (1.0f - para->alpha_filter) * roll_spd_filtree);
 
 
                 // Saturation de la consigne de vitesse de roll et de la vitesse de roll et calcul de l'erreur
@@ -266,15 +276,18 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
                 // PRAO_SAT = 0 -> pas de saturation
                 // PRAO_SAT = 1 -> saturation
                 float roll_spd_sp = (1.0f - para->sat) * roll_spd_sp_nonsat +
-                                    (para->sat) *(math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max));
+                                    (para->sat) *
+                                    (math::constrain(roll_spd_sp_nonsat, -para->roll_spd_max, para->roll_spd_max));
                 float roll_spd = (1.0f - para->sat) * roll_spd_filtree +
-                                 (para->sat) *(math::constrain(roll_spd_filtree, -para->roll_spd_max, para->roll_spd_max));
+                                 (para->sat) *
+                                 (math::constrain(roll_spd_filtree, -para->roll_spd_max, para->roll_spd_max));
                 roll_spd_err = roll_spd_sp - roll_spd;
             }
 
             // PI sur la vitesse de roll avec saturation du terme integrateur (permet de le vider)
             float roll_spd_prop = roll_spd_err * para->roll_p;
-            roll_spd_int = math::constrain(roll_spd_int + roll_spd_err * dt * para->roll_i, -para->roll_int_max, para->roll_int_max);
+            roll_spd_int = math::constrain(roll_spd_int + roll_spd_err * dt * para->roll_i, -para->roll_int_max,
+                                           para->roll_int_max);
             float roll_output = roll_scaler * (roll_spd_prop + roll_spd_int);
 
 
@@ -353,14 +366,22 @@ void control_attitude(struct _params *para, const struct manual_control_setpoint
 
             /** Controle du lift **/
 
+
             // Calcul de l'erreur par rapport au setpoint désiré (qui vient de la RC)
             // ATTENTION: Changer si la taille du palpeur change de l=0.8m
             // (marge de sécurité pour pas que le palpeur soit vertical)
-            float lift_err =  0.4f * (manual_sp->x + 1.0f) - dist_sensor->current_distance;
+
+            //calibration of the palpeur
+
+            float offset = (para->plp_hzl + para->plp_vtl) / 2;
+            float range = (para->plp_hzl - para->plp_vtl) / 2;
+
+            float lift_err = range * manual_sp->x + offset - dist_sensor->current_distance;
 
             // PI sur la position de lift avec saturation du terme integrateur (permet de le vider)
             float lift_prop = lift_err * para->lift_p;
-            lift_int = math::constrain(lift_int + lift_err * dt * para->lift_i, -para->lift_int_max, para->lift_int_max);
+            lift_int = math::constrain(lift_int + lift_err * dt * para->lift_i, -para->lift_int_max,
+                                       para->lift_int_max);
             float lift_output = lift_scaler * (lift_prop + lift_int);
 
 
